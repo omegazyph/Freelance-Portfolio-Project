@@ -1,0 +1,27 @@
+# --- VSCode & System Files ---
+.vscode/
+.vscode-server/
+bin/
+node/
+*.exe
+*.dll
+*.so
+*.pyd
+Thumbs.db
+Desktop.ini
+settings.json
+
+# --- Python Files ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+
+# --- Large Files & Logs ---
+*.log
+*.zip
+*.tar.gz
