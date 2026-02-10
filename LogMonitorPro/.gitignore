@@ -9,7 +9,7 @@ node/
 *.pyd
 Thumbs.db
 Desktop.ini
-settings.json
+.github
 
 # --- Python Files ---
 __pycache__/
