@@ -19,8 +19,7 @@
 ENABLE_CLEANUP="NO"
 
 # If the user provides an argument when running the script, we capture it.
-# Example: ./monitor_logs.sh cleanup
-USER_ARGUMENT=$1
+read -p  "if you would like to cleanup old reports.  type:(cleanup)" USER_ARGUMENT
 
 if [ "$USER_ARGUMENT" == "cleanup" ]; then
     ENABLE_CLEANUP="YES"
