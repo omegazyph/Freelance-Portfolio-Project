@@ -1,5 +1,5 @@
 # --- VSCode & System Files ---
-.vscode
+.vscode/
 .vscode-server/
 bin/
 node/
