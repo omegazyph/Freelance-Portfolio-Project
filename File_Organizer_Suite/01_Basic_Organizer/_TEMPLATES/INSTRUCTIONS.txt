@@ -1,0 +1,25 @@
+============================================================
+           BASIC FILE OPTIMIZER - INSTRUCTIONS
+============================================================
+Author:  omegazyph
+Date:    2026-02-11
+------------------------------------------------------------
+
+This script is designed for Unix-like environments (Linux, 
+macOS, or Windows with Git Bash/WSL).
+
+HOW TO USE:
+1. Ensure the script has execute permissions. 
+   Run: chmod +x Basic_Optimizer.sh
+2. Execute the script: ./Basic_Optimizer.sh
+3. By default, this script organizes your 'Downloads' folder.
+
+FILE CATEGORIES:
+- Images: jpg, jpeg, png, gif
+- Documents: pdf, doc, docx, txt
+- Media: mp3, mp4, mov, zip, rar
+
+CUSTOMIZATION:
+If you would like to target a different folder or add more 
+extensions, please contact omegazyph on Upwork!
+============================================================

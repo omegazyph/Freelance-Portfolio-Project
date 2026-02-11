@@ -1,0 +1,37 @@
+============================================================
+       INVOICE EXTRACTOR PRO - SUPPORT & INSTRUCTIONS
+============================================================
+Author:  omegazyph
+Version: 1.0 (Standard Tier)
+Date:    2026-02-11
+------------------------------------------------------------
+
+Thank you for choosing omegazyph for your automation needs! 
+Below you will find the instructions to get your tool 
+running on your Windows environment.
+
+🚀 QUICK START STEPS:
+1. Ensure Python 3.x is installed on your system.
+2. Open your terminal and run: pip install -r requirements.txt
+3. Place your PDF invoices into the 'Invoices' folder.
+4. Double-click 'run_tool.bat' to begin processing.
+
+📂 WHERE IS MY DATA?
+- Your extracted data will be saved in the 'Output' folder 
+   as 'Extracted_Data.csv'.
+- (Standard/Advanced Only) Your PDF files will be 
+  automatically renamed for better organization.
+
+🛠 SUPPORT & CUSTOMIZATION:
+If you have a unique invoice layout that isn't being read 
+correctly, or if you would like to add custom features 
+(like Excel export or Email integration), please reach 
+out to me via the Upwork message board.
+
+I aim for 5-star satisfaction. If you encounter any issues, 
+please contact me before leaving feedback so I can 
+resolve it for you immediately!
+
+Best Regards,
+omegazyph
+============================================================
