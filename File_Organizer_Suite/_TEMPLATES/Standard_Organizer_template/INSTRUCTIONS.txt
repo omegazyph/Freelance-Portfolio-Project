@@ -1,0 +1,24 @@
+============================================================
+          STANDARD FILE OPTIMIZER - INSTRUCTIONS
+============================================================
+Author:  omegazyph
+Date:    2026-02-11
+------------------------------------------------------------
+
+FEATURES:
+- Case-Insensitive Matching (Catches .JPG and .jpg)
+- Dynamic Folder Creation (Only creates folders if files exist)
+- Expanded category support (Images, Docs, Videos, Archives)
+
+HOW TO USE:
+1. Open Git Bash or WSL on your Windows machine.
+2. Run: chmod +x Standard_Optimizer.sh
+3. Run: ./Standard_Optimizer.sh
+
+CONFIGURING THE PATH:
+By default, this targets your Downloads folder. To change this,
+open the script and edit the TARGET_DIRECTORY variable on line 12.
+
+Best Regards,
+omegazyph
+============================================================

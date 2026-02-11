@@ -1,0 +1,22 @@
+============================================================
+          ADVANCED FILE OPTIMIZER - INSTRUCTIONS
+============================================================
+Author:  omegazyph
+Date:    2026-02-11
+------------------------------------------------------------
+
+PREMIUM FEATURES:
+- Collision Detection: If a file already exists in the folder, 
+  this script renames the new one with a "_Copy" suffix.
+- Detailed Logging: Tracks move errors without crashing.
+- Wide Format Support: Includes Development and Executable types.
+
+HOW TO USE:
+1. Ensure Python 3.x is installed.
+2. Double-click 'run_advanced.bat' to clean your folder.
+
+TECHNICAL NOTE:
+The script is currently configured to target your Windows 
+Downloads folder. To change the target, edit line 84 in 
+'Advanced_Optimizer.py'.
+============================================================
