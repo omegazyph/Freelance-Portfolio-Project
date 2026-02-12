@@ -1,13 +1,13 @@
 @echo off
 :: Date: 2026-02-11
 :: Author: omegazyph
-:: Description: Standard Tier Launcher with Auto-Renaming
+:: Description: Standard Tier Launcher with File Renaming
 
-title omegazyph Standard Invoice Tool
+title omegazyph Standard Extractor
 echo ------------------------------------------
-echo Launching Standard Extractor & Organizer...
+echo Initializing Standard Engine...
 echo ------------------------------------------
 python Scripts/Invoice_Extractor_Standard.py
 echo.
-echo Task Finished. Files have been organized.
+echo Process Complete. Check 'Invoices' for renamed files.
 pause
