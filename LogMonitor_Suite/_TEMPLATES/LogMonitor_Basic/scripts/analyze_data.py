@@ -1,43 +1,43 @@
-"""
-Date: 2026-02-10
-Script Name: analyze_data.py
-Author: omegazyph
-Updated: 2026-02-10
-Description: This program uses absolute path resolution to ensure it can locate 
-             the logs and reports folders even when executed from a subfolder.
-"""
+# -----------------------------------------------------------------------------
+# Date: 2026-01-05
+# Script Name: analyze_data.py
+# Author: omegazyph
+# Updated: 2026-02-14
+# Description: This program uses path resolution to navigate from the scripts 
+#              folder to a separate logs folder to process data.
+# -----------------------------------------------------------------------------
 
 import os
 import sys
 from datetime import datetime
 
 def run_log_analysis():
-    # Identify the directory where this script is currently located
-    # This represents the "Log_Monitor_System/scripts" folder
+
+    # this will be the 'scripts' folder.
     script_directory = os.path.dirname(os.path.abspath(__file__))
 
-    # Navigate up one level to reach the main project root directory
-    # This represents the "Log_Monitor_System" folder
+    # Navigate 'up' one level to the main Project folder.
     project_root = os.path.dirname(script_directory)
 
-    # Define the full paths to the logs and reports folders
+    # Define the paths for the logs and reports folders.
     log_folder_path = os.path.join(project_root, "logs")
     report_folder_path = os.path.join(project_root, "reports")
     
+    # Specify the file name inside that folder.
     input_file_path = os.path.join(log_folder_path, "system_activity.log")
     
-    # Create a unique filename for the output report
+    # Create a unique filename for the output report with a timestamp.
     time_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_file_path = os.path.join(report_folder_path, f"analysis_report_{time_stamp}.txt")
 
-    # Ensure the reports directory exists at the root level
+    # Ensure the reports directory exists; if not, create it.
     if not os.path.exists(report_folder_path):
         os.makedirs(report_folder_path)
 
     print(f"Attempting to open the log file at: {input_file_path}")
 
     try:
-        # Open the log file using the resolved absolute path
+        # Open the log file using the resolved path.
         with open(input_file_path, "r") as source_file:
             log_lines = source_file.readlines()
 
@@ -45,10 +45,10 @@ def run_log_analysis():
             print("The log file was located but it contains no data.")
             return
 
-        # Identify every line that contains the word ERROR
+        # Logic: Identify every line that contains the word ERROR.
         error_logs = [line.strip() for line in log_lines if "ERROR" in line]
 
-        # Write the summary findings to the report file
+        # Write the results to the report file.
         with open(output_file_path, "w") as report_file:
             report_file.write("LOG MONITORING SYSTEM REPORT\n")
             report_file.write("Author: omegazyph\n")
@@ -60,11 +60,12 @@ def run_log_analysis():
             for count, error in enumerate(error_logs, start=1):
                 report_file.write(f"{count}. {error}\n")
 
-        print(f"The analysis is complete. The report is saved at: {output_file_path}")
+        print(f"Analysis complete. Report saved at: {output_file_path}")
 
     except FileNotFoundError:
         print(f"Error: Could not find the file at {input_file_path}")
-        print("Please ensure that the logs folder and the log file exist at the log folder.")
+        print("Check if the 'logs' folder exists and contains 'system_activity.log'.")
+        sys.exit(1)
     except Exception as unexpected_error:
         print(f"An unexpected error has occurred: {unexpected_error}")
         sys.exit(1)

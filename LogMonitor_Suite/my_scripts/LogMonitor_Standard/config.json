@@ -1,0 +1,5 @@
+{
+    "search_keywords": ["ERROR", "CRITICAL", "FAILED"],
+    "log_filename": "system_activity.log",
+    "report_prefix": "standard_analysis"
+}
