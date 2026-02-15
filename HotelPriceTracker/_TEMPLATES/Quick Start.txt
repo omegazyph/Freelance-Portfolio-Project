@@ -1,0 +1,9 @@
+Hello! Thank you for choosing the omegazyph Hotel Tracker.
+
+    Extract the folder.
+
+    Open your terminal and run pip install -r requirements.txt.
+
+    Run the script using python [script_name].py.
+
+    All data will be saved to a clean CSV compatible with Excel and OpenOffice.
