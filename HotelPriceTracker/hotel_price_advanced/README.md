@@ -1,6 +1,6 @@
 # Hotel Price Tracker (Advanced Edition)
 
-# Developer Information
+## Developer Information
 
     Author: omegazyph
     Script Name: hotel_price_advanced.py
