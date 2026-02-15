@@ -1,50 +1,68 @@
 # Hotel Price Tracker (Advanced Edition)
 
-## Developer Information
+# Developer Information
 
     Author: omegazyph
     Script Name: hotel_price_advanced.py
+    Setup Utility: setup.sh
     Updated: 2026-02-15
 
 ## Premium Features
 
-    This is the flagship version of the tracker, built for automated monitoring and immediate notification.
+    This version is designed for high-performance monitoring and ease of use.
 
-    Color-Coded Terminal UI: High-visibility status updates (Green for success, Yellow for alerts, Red for errors).
+    Automated Environment Setup: Use the included Bash script to install all dependencies automatically.
 
-    Automated Email Alerts: Integrated SMTP support to notify you the second a price drops below your target.
+    Color-Coded Terminal UI: Instant visual feedback (Green = Success, Yellow = Price Alert, Red = Error).
 
-    JSON Configuration: Manage all settings (emails, passwords, price thresholds) in an external config.json file—no coding required.
+    Automated Email Notifications: Get alerted the moment a price drops below your custom threshold.
 
-    Universal CSV Export: Uses utf-8-sig for instant, clean opening in OpenOffice, Excel, and Google Sheets.
+    External Configuration: Manage settings via config.json without touching the Python code.
 
-## Installation & Setup
+## Installation
 
-    Project Directory: Ensure hotel_price_advanced.py and hotel_list.txt are in the same folder.
+    On your Lenovo Legion (or any machine with a Bash-compatible terminal like MINGW64/Git Bash), run the following:
 
-    Initialize Config: Run the script once to generate the config.json file.
+    Execute Setup:
+    Bash
 
-    Configure Settings: Open config.json in VSCode and update:
+    bash setup.sh
 
-        email_alerts: Set to true to enable notifications.
+    This script will automatically verify Python and install the required requests and beautifulsoup4 libraries.
 
-        sender_password: Use a Google App Password (not your standard login).
+## Configuration
 
-        price_threshold: Set your "Deal" price (e.g., 120.00).
+    Initialize: Run the script once (python hotel_price_advanced.py) to generate config.json.
 
-## Operation
+    Edit Settings: Open config.json and set your preferences:
 
-Run the script from your terminal:
+        "email_alerts": true
+
+        "price_threshold": 100.00 (Set your target price)
+
+        "sender_password": "your-app-password"
+
+## Usage
+
+Once configured, run the tracker anytime:
 Bash
 
 python hotel_price_advanced.py
 
-## Project Structure
+## File Structure
 
 Plaintext
 
 HotelPriceTracker_Advanced/
-├── hotel_price_advanced.py   # Main Engine
-├── config.json               # User Settings (Auto-generated)
+├── hotel_price_advanced.py   # Main Scraper Engine
+├── setup.sh                  # Automated Bash Setup
+├── requirements.txt          # Dependency List
+├── config.json               # User Configuration
 ├── hotel_list.txt            # Target URLs
-└── price_history.csv         # Persistent Log
+└── price_history.csv         # Historical Price Log
+
+## Technical Support
+
+    Spreadsheet Compatibility: The price_history.csv is optimized for OpenOffice and Excel using UTF-8-SIG encoding.
+
+    Numeric Data: Prices are stored as clean numbers for easy calculations and charting.
