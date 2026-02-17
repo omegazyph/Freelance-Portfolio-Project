@@ -1,0 +1,20 @@
+Hi [Client Name],
+
+Thank you for choosing the omegazyph File Optimizer suite! 
+
+Please follow these steps to get your environment running:
+
+    Unzip the File: Extract the contents of the download to a folder on your Lenovo Legion or preferred directory.
+
+    Configuration (Standard/Advanced Tiers): If you have the Standard or Advanced version, 
+        open the config.json file to ensure the folder paths match your system.
+
+    Launch the Suite: * Windows: Run the .bat file to initialize the environment as seen in the "INITIALIZING ENVIRONMENT" screen.
+
+        Linux/Bash: Use the .sh script to begin the optimization process.
+
+    Verify Results: Once you see the "ORGANIZATION SUMMARY" table, your files have been successfully relocated.
+
+Best regards,
+
+Wayne (omegazyph)
