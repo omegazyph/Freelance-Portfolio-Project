@@ -1,7 +1,0 @@
-Data Type	     Regex Pattern	                       Description
-
-Standard Date	\d{1,2}[/-]\d{1,2}[/-]\d{2,4}	     Matches 12/17/1975, 12-17-75, etc.
-Euro Date	    \d{1,2}\.\d{1,2}\.\d{4}	             Matches European style 17.12.1975.
-Currency	   `[\d,.]+\s?(?:USD	                 EUR
-Invoice No	   `(?:Inv	Invoice
-Email	       [\w.-]+@[\w.-]+\.\w+	                 Useful if the client wants to extract the vendor email.

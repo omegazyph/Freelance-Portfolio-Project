@@ -1,6 +1,0 @@
-Invoice_Extractor_Basic/
-├── Invoices/              <-- (Put sample PDFs here)
-├── Output/                <-- (CSV results will appear here)
-├── Scripts/
-│   └── Invoice_Extractor_Basic.py
-└── requirements.txt

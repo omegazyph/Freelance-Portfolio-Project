@@ -1,5 +1,0 @@
-
-pdfplumber
-pandas
-gspread
-google-auth

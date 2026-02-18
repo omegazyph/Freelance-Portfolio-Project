@@ -1,0 +1,9 @@
+# ==============================================================================
+# Date:         2026-02-17
+# Project:      Invoice Data Extractor (Standard)
+# Author:       omegazyph
+# Description:  Dependency list for PDF data extraction and processing.
+# ==============================================================================
+
+pdfplumber>=0.10.0
+pandas>=2.1.0

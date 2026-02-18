@@ -1,0 +1,22 @@
+============================================================
+          THANK YOU FOR CHOOSING OMEGAZYPH!
+============================================================
+
+Hi Wayne,
+
+Thank you for using the Standard Invoice Extractor & Organizer.
+This tool was designed to solve the headache of messy 
+filenames and manual data entry.
+
+Key Reminder:
+This version renames your original PDF files to make them 
+easier to find. If you need to keep your original filenames, 
+please make a copy of your invoices before running the tool!
+
+For support or custom development requests, reach out to 
+me on Upwork.
+
+Best regards,
+omegazyph
+(Wayne)
+============================================================
