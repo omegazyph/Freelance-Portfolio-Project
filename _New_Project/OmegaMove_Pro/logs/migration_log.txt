@@ -1,0 +1,12 @@
+2026-02-20 09:23:06,030 - INFO - SUCCESS: Migrated test3
+2026-02-20 09:38:19,472 - INFO - SUCCESS: New Text Document.txt moved to server/Documents
+2026-02-20 11:13:25,734 - INFO - SUCCESS: Migrated Desktop
+2026-02-20 11:13:26,489 - INFO - SUCCESS: Migrated Documents
+2026-02-20 11:13:27,643 - INFO - SUCCESS: Migrated Downloads
+2026-02-20 11:13:28,887 - INFO - SUCCESS: Migrated Music
+2026-02-20 11:13:29,696 - INFO - SUCCESS: Migrated Pictures
+2026-02-20 11:13:30,526 - INFO - SUCCESS: Migrated Videos
+2026-02-20 11:19:29,943 - INFO - SUCCESS: Moved New folder to server/Documents
+2026-02-20 11:28:01,527 - INFO - SUCCESS: Moved New folder to server/Downloads
+2026-02-20 11:35:58,431 - INFO - SUCCESS: Moved update_PC and clean from Desktop
+2026-02-20 11:45:00,919 - INFO - SUCCESS: Moved update_PC and clean from Desktop

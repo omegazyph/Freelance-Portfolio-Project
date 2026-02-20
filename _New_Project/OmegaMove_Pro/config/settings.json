@@ -1,0 +1,16 @@
+{
+    "connection": {
+        "server_ip": "100.64.81.82",
+        "username": "wayne1",
+        "check_interval_seconds": 5
+    },
+    "paths": {
+        "drop_zone": "C:/Users/omega/Desktop/TO_SERVER",
+        "sub_domains": ["Desktop", "Documents", 
+        "Downloads", "Music", "Pictures", "Videos"],
+        "remote_base_directory": "~/"
+    },
+    "preferences": {
+        "dry_run": false
+    }
+}
