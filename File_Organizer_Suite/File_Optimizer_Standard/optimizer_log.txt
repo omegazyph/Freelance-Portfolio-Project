@@ -1,0 +1,10 @@
+2026-03-01 12:25:18,348 - INFO - Started cleaning: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\File_Optimizer_Standard
+2026-03-01 12:25:18,354 - INFO - Moved: README.txt to Documents
+2026-03-01 12:25:18,354 - INFO - Organization complete. Elapsed: 0:00:00.006393
+2026-03-01 12:55:38,301 - INFO - Started cleaning: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\File_Optimizer_Standard
+2026-03-01 12:55:38,301 - INFO - Moved: README.txt to Documents
+2026-03-01 12:55:38,301 - INFO - Organization complete. Elapsed: 0:00:00
+2026-03-01 12:59:47,896 - ERROR - Invalid path provided: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\ls
+2026-03-01 13:00:37,120 - ERROR - Invalid path provided: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\~\Documents
+2026-03-01 13:01:25,435 - INFO - Started cleaning: C:\Users\omega\Documents
+2026-03-01 13:01:25,437 - INFO - Organization complete. Files moved: 0

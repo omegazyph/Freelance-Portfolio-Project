@@ -1,0 +1,3 @@
+2026-03-01 12:20:44,403 - INFO - Started cleaning: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite
+2026-03-01 12:20:44,403 - ERROR - Failed to move optimizer_log.txt: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\omega\\Documents\\Freelance-Portfolio-Project\\File_Organizer_Suite\\optimizer_log.txt'
+2026-03-01 12:23:02,506 - INFO - Started cleaning: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite
