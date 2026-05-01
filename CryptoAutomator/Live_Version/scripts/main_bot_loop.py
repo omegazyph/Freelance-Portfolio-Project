@@ -273,6 +273,25 @@ def run_trading_engine():
                     pnl_dollars = current_value - state["total_cost"]
                     total_unrealized_profit_loss += pnl_dollars
                     pnl_pct = (pnl_dollars / state["total_cost"]) * 100
+
+                    # Trailing Sell
+                    # 1. Track peak
+                    if current_price >= upper_band and profit_loss_percentage >= 0.20:
+                        if current_price > state.get("highest_seen", 0.0):
+                            state["highest_seen"] = current_price
+
+                    # 2. Check for 3% crop from peak
+                    highest_price = state.get("highest_seen",0.0)
+                    if highest_price > 0:
+                        if current_price <= highest_price * 0.97:
+                            try:
+                                sell_quantity = state["coins"]
+                                order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
+                                execution_price = order.get('price',current_price)
+                                record_successful_trade(active_symbol, "LIVE_SELL",sell_quantity, execution_price, available_usd_cash + (sell_quantity * execution_price), f"Trailing Stop Hit")
+                                state["highest_seen"] = 0.0
+                            except Exception as e:
+                                print(f"Sell Error: {e}")
                     
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
