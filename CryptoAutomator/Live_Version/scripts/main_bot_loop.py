@@ -2,12 +2,11 @@
 Date: 2026-01-05
 Script Name: main_bot_loop.py
 Author: omegazyph
-Updated: 2026-03-23
+Updated: 2026-05-01
 Description: 
     Wayne's LIVE Trading Bot for Crypto.com.
-    Strategy: Buy at Lower Bollinger Band, Sell at Upper Bollinger Band.
-    Fixed: CSV logging bypasses system buffering to prevent data loss.
-    Safety Net: Added check to prevent selling below average entry price.
+    Strategy: Buy at Lower Bollinger Band with Trailing Buy bounce.
+    Strategy: Sell at Upper Bollinger Band with Trailing Stop drop.
 """
 
 import ccxt
@@ -28,8 +27,11 @@ init(autoreset=True, strip=False)
 EXECUTION_STATE_CONTINUOUS = 0x80000000
 EXECUTION_STATE_SYSTEM_REQUIRED = 0x00000001
 def prevent_system_sleep():
-    # ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_SYSTEM_REQUIRED | EXECUTION_STATE_CONTINUOUS)
-    pass
+    if os.name == 'nt':
+        try:
+            ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_SYSTEM_REQUIRED | EXECUTION_STATE_CONTINUOUS)
+        except Exception:
+            pass
 
 def allow_system_sleep():
     if os.name == 'nt':
@@ -39,7 +41,6 @@ def allow_system_sleep():
             pass
 
 # --- DIRECTORY AND FILE PATHS ---
-# Using .resolve() to ensure absolute paths regardless of where the script is launched
 current_script_path = Path(__file__).resolve()
 project_root_directory = current_script_path.parent.parent
 environment_file_path = project_root_directory / ".env"
@@ -70,37 +71,20 @@ def load_trading_configuration():
         return json.load(file)
 
 def record_successful_trade(symbol, side, amount, price, remaining_balance, note):
-    """
-    Logs every trade to the CSV file. 
-    Uses flush and fsync to ensure data is written immediately to disk.
-    """
     _, log_path = get_required_file_paths()
     time_full = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(log_path)
     
-    # Opening with buffering=0 is only allowed in binary mode, 
-    # so we use manual flush and fsync instead for text mode.
     with open(log_path, mode="a", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
         if not file_exists:
             writer.writerow(["Timestamp", "Symbol", "Side", "Amount", "Price", "Wallet", "Note"])
         
-        writer.writerow([
-            time_full, 
-            symbol, 
-            side, 
-            f"{amount:.8f}", 
-            f"{price:.8f}", 
-            f"{remaining_balance:.2f}", 
-            note
-        ])
-        
-        # --- CRITICAL FIX: FORCE DATA TO DISK ---
-        csv_file.flush()            # Push from Python buffer to OS buffer
-        os.fsync(csv_file.fileno()) # Push from OS buffer to physical Disk
+        writer.writerow([time_full, symbol, side, f"{amount:.8f}", f"{price:.8f}", f"{remaining_balance:.2f}", note])
+        csv_file.flush()
+        os.fsync(csv_file.fileno())
 
 def get_recent_activity_from_csv():
-    """Reads the last 5 trades from your log to show on the dashboard."""
     _, log_path = get_required_file_paths()
     recent_lines = []
     if not os.path.isfile(log_path):
@@ -123,7 +107,6 @@ def get_recent_activity_from_csv():
     return recent_lines
 
 def restore_portfolio_from_log():
-    """Checks your CSV to see what coins you are currently holding."""
     _, log_path = get_required_file_paths()
     active_holdings = {}
     if not os.path.isfile(log_path):
@@ -139,53 +122,42 @@ def restore_portfolio_from_log():
 
                 if side == "LIVE_BUY":
                     if symbol not in active_holdings:
-                        active_holdings[symbol] = {"status": "HOLDING", "coins": 0.0, "total_cost": 0.0}
-                    
-                    # Always force status to HOLDING when buy is found
+                        active_holdings[symbol] = {
+                            "status": "HOLDING", 
+                            "coins": 0.0, 
+                            "total_cost": 0.0,
+                            "highest_seen": 0.0,
+                            "lowest_seen_price": 0.0
+                        }
                     active_holdings[symbol]["status"] = "HOLDING"
                     active_holdings[symbol]["coins"] += amount
                     active_holdings[symbol]["total_cost"] += (amount * price)
-
                 elif side == "LIVE_SELL":
-                    # Mark as WAITING and reset the bag
-                    active_holdings[symbol] = {"status": "WAITING", "coins": 0.0, "total_cost": 0.0}
+                    active_holdings[symbol] = {
+                        "status": "WAITING", 
+                        "coins": 0.0, 
+                        "total_cost": 0.0,
+                        "highest_seen": 0.0,
+                        "lowest_seen_price": 0.0
+                    }
     except Exception:
         pass
     return active_holdings
 
 def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
-    """
-    Fetches OHLCV data and calculates the Upper and Lower bands.
-    Adjust the 'timeframe' parameter to change trading frequency.
-    Common options: '1m', '5m', '15m', '1h', '4h', '1d'
-    Defult is 1h
-    """
     try:
-        # Fetch candles from the exchange
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe)
-
-        # Create the DataFrame
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        
-        # Calculate moving average and standard deviation
         df['sma'] = df['close'].rolling(window=window).mean()
         df['std'] = df['close'].rolling(window=window).std()
-
-        # Calculate Upper and Lower Bands
         df['upper'] = df['sma'] + (df['std'] * 2)
         df['lower'] = df['sma'] - (df['std'] * 2)
-
-        # Pull the latest row
         latest = df.iloc[-1]
-
         return latest['lower'], latest['upper'], latest['close']
-    
     except Exception:
-        # Simple error catch to keep the loop running
         return None, None, None
 
 def run_trading_engine():
-    """Main loop for the Sentinel bot."""
     prevent_system_sleep()
     exchange_client = ccxt.cryptocom({
         "apiKey": os.getenv("CRYPTO_COM_KEY"),
@@ -200,19 +172,13 @@ def run_trading_engine():
             trading_pairs_list = settings["trading_pairs"]
             global_settings = settings.get("global_settings", {})
 
-            # Show what i started with
             starting_bal = global_settings.get("starting_balance", 0.0)
-            
             trade_dollar_amount = global_settings.get("trade_dollar_amount", 2.0)
             check_interval_seconds = global_settings.get("check_interval_seconds", 30)
             
             balance_response = exchange_client.fetch_balance()
-
-            # Get the standard USD and thr Instant Deposit Credit
             settled_usd = balance_response.get('total', {}).get("USD", 0.0)
             instant_credit = balance_response.get('total', {}).get("USD-CREDIT", 0.0)
-
-            # Add them together to see the buying power
             available_usd_cash = float(settled_usd + instant_credit)
             
             total_unrealized_profit_loss = 0.0
@@ -233,10 +199,17 @@ def run_trading_engine():
                     continue
 
                 if active_symbol not in current_portfolio:
-                    current_portfolio[active_symbol] = {"status": "WAITING", "coins": 0.0, "total_cost": 0.0}
+                    current_portfolio[active_symbol] = {
+                        "status": "WAITING", 
+                        "coins": 0.0, 
+                        "total_cost": 0.0,
+                        "highest_seen": 0.0,
+                        "lowest_seen_price": 0.0
+                    }
                 
                 state = current_portfolio[active_symbol]
 
+                # --- WAITING STATE (SEARCHING FOR BUY) ---
                 if state["status"] == "WAITING":
                     dashboard_data_rows.append(
                         f"{active_symbol:<10} "
@@ -245,28 +218,40 @@ def run_trading_engine():
                         f"BUY AT: ${lower_band:<10,.4f}"
                     )
                     
+                    trailing_buy_percentage = global_settings.get("trailing_buy_percentage", 1.0)
+                    
                     if current_price <= lower_band:
-                        if available_usd_cash >= trade_dollar_amount:
-                            try:
-                                qty = trade_dollar_amount / current_price
-                                order = exchange_client.create_market_buy_order(active_symbol, qty)
-                                # Fetch actual price from order response if available
-                                exec_price = order.get('price') if order.get('price') else current_price
-                                exec_qty = order.get('amount') if order.get('amount') else qty
-                                
-                                record_successful_trade(
-                                    active_symbol, 
-                                    "LIVE_BUY", 
-                                    exec_qty, 
-                                    exec_price, 
-                                    available_usd_cash - trade_dollar_amount, 
-                                    "Lower Band Hit"
-                                )
-                            except Exception:
-                                pass
-                        else:
-                            insufficient_funds_warning_active = True
+                        if current_price < state.get("lowest_seen_price", 999999.0):
+                            state["lowest_seen_price"] = current_price
 
+                    lowest_recorded_price = state.get("lowest_seen_price", 0.0)
+                    if lowest_recorded_price > 0:
+                        buy_trigger_level = lowest_recorded_price * (1 + (trailing_buy_percentage / 100))
+                        
+                        if current_price >= buy_trigger_level:
+                            if available_usd_cash >= trade_dollar_amount:
+                                try:
+                                    quantity_to_purchase = trade_dollar_amount / current_price
+                                    order_response = exchange_client.create_market_buy_order(active_symbol, quantity_to_purchase)
+                                    
+                                    execution_price = order_response.get('price') if order_response.get('price') else current_price
+                                    execution_quantity = order_response.get('amount') if order_response.get('amount') else quantity_to_purchase
+
+                                    record_successful_trade(
+                                        active_symbol, 
+                                        "LIVE_BUY", 
+                                        execution_quantity, 
+                                        execution_price, 
+                                        available_usd_cash - trade_dollar_amount, 
+                                        f"Trailing Buy: {trailing_buy_percentage}% bounce"
+                                    )
+                                    state["lowest_seen_price"] = 0.0
+                                except Exception:
+                                    pass
+                            else:
+                                insufficient_funds_warning_active = True
+
+                # --- HOLDING STATE (SEARCHING FOR SELL) ---
                 elif state["status"] == "HOLDING":
                     average_entry = state["total_cost"] / state["coins"]
                     current_value = state["coins"] * current_price
@@ -274,21 +259,28 @@ def run_trading_engine():
                     total_unrealized_profit_loss += pnl_dollars
                     pnl_pct = (pnl_dollars / state["total_cost"]) * 100
 
-                    # Trailing Sell
                     # 1. Track peak
-                    if current_price >= upper_band and profit_loss_percentage >= 0.20:
+                    if current_price >= upper_band and pnl_pct >= 0.20:
                         if current_price > state.get("highest_seen", 0.0):
                             state["highest_seen"] = current_price
 
-                    # 2. Check for 3% crop from peak
-                    highest_price = state.get("highest_seen",0.0)
+                    # 2. Check for 3% drop from peak
+                    highest_price = state.get("highest_seen", 0.0)
                     if highest_price > 0:
                         if current_price <= highest_price * 0.97:
                             try:
                                 sell_quantity = state["coins"]
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
-                                execution_price = order.get('price',current_price)
-                                record_successful_trade(active_symbol, "LIVE_SELL",sell_quantity, execution_price, available_usd_cash + (sell_quantity * execution_price), f"Trailing Stop Hit")
+                                execution_price = order.get('price') if order.get('price') else current_price
+                                
+                                record_successful_trade(
+                                    active_symbol, 
+                                    "LIVE_SELL", 
+                                    sell_quantity, 
+                                    execution_price, 
+                                    available_usd_cash + (sell_quantity * execution_price), 
+                                    "Trailing Stop Hit"
+                                )
                                 state["highest_seen"] = 0.0
                             except Exception as e:
                                 print(f"Sell Error: {e}")
@@ -302,32 +294,12 @@ def run_trading_engine():
                         f"{color}{pnl_pct:>+6.2f}%"
                     )
 
-                    # --- SAFETY NET: ONLY SELL IF PRICE IS ABOVE ENTRY COST ---
-                    if current_price >= upper_band and current_price >= (average_entry * 1.002):
-                        try:
-                            wallet_bal = exchange_client.fetch_balance().get('free', {}).get(base_asset, 0.0)
-                            sell_qty = min(state["coins"], wallet_bal)
-                            order = exchange_client.create_market_sell_order(active_symbol, sell_qty)
-                            
-                            exec_price = order.get('price') if order.get('price') else current_price
-                            
-                            record_successful_trade(
-                                active_symbol, 
-                                "LIVE_SELL", 
-                                sell_qty, 
-                                exec_price, 
-                                available_usd_cash + current_value, 
-                                "Upper Band Hit (0.20% Profit)"
-                            )
-                        except Exception:
-                            pass
-
             clear_terminal_screen()
-            pnl_color = InterfaceColors.SUCCESS_GREEN if total_unrealized_profit_loss >= 0 else InterfaceColors.DANGER_RED
+            total_pnl_color = InterfaceColors.SUCCESS_GREEN if total_unrealized_profit_loss >= 0 else InterfaceColors.DANGER_RED
             print(f"{InterfaceColors.HEADER_CYAN}===========================================================================")
             print(f" {InterfaceColors.HEADER_CYAN}WAYNE'S SENTINEL LOOP | Started: ${starting_bal:.2f} | {time.strftime('%H:%M:%S')}")
             print(f" {InterfaceColors.HEADER_CYAN}CASH: {InterfaceColors.RESET_STYLE}${available_usd_cash:.2f} | "
-                  f"{InterfaceColors.HEADER_CYAN}UNREALIZED P/L: {pnl_color}${total_unrealized_profit_loss:+.2f}{InterfaceColors.RESET_STYLE}")
+                  f"{InterfaceColors.HEADER_CYAN}UNREALIZED P/L: {total_pnl_color}${total_unrealized_profit_loss:+.2f}{InterfaceColors.RESET_STYLE}")
             print(f"{InterfaceColors.HEADER_CYAN}===========================================================================")
             print(f"{'SYMBOL':<10} {'STATUS':<15} {'DETAILS':<32} {'P/L %'}")
             print("-" * 75)
