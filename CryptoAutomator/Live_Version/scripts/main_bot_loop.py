@@ -29,15 +29,16 @@ EXECUTION_STATE_SYSTEM_REQUIRED = 0x00000001
 def prevent_system_sleep():
     if os.name == 'nt':
         try:
+            # Re-enabled the thread state to ensure your Lenovo Legion stays awake
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_SYSTEM_REQUIRED | EXECUTION_STATE_CONTINUOUS)
-        except Exception:
+        except Exception as error_message:
             pass
 
 def allow_system_sleep():
     if os.name == 'nt':
         try:
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_CONTINUOUS)
-        except Exception:
+        except Exception as error_message:
             pass
 
 # --- DIRECTORY AND FILE PATHS ---
@@ -102,8 +103,9 @@ def get_recent_activity_from_csv():
                 note = row[6]
                 color = InterfaceColors.SUCCESS_GREEN if "BUY" in side else InterfaceColors.DANGER_RED
                 recent_lines.insert(0, f"[{timestamp}] {color}{side:<10}{InterfaceColors.RESET_STYLE} {symbol} {note}")
-    except Exception:
-        pass
+    except Exception as error_message:
+        print(f"somthing wrong in get_recent_activity_from_csv {error_message}")
+    
     return recent_lines
 
 def restore_portfolio_from_log():
@@ -140,8 +142,8 @@ def restore_portfolio_from_log():
                         "highest_seen": 0.0,
                         "lowest_seen_price": 0.0
                     }
-    except Exception:
-        pass
+    except Exception as error_message:
+        print(f"somthing worng in restore_portfolio_from_log {error_message}")
     return active_holdings
 
 def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
@@ -154,7 +156,8 @@ def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
         df['lower'] = df['sma'] - (df['std'] * 2)
         latest = df.iloc[-1]
         return latest['lower'], latest['upper'], latest['close']
-    except Exception:
+    except Exception as error_message:
+        print(f"Somthing is wrong in Cluculate_bollinger_bands {error_message}")
         return None, None, None
 
 def run_trading_engine():
@@ -246,8 +249,9 @@ def run_trading_engine():
                                         f"Trailing Buy: {trailing_buy_percentage}% bounce"
                                     )
                                     state["lowest_seen_price"] = 0.0
-                                except Exception:
-                                    pass
+                                except Exception as error_message:
+                                    print(f"somthing worng in Waiting block {error_message}")
+                                    
                             else:
                                 insufficient_funds_warning_active = True
 
@@ -259,15 +263,20 @@ def run_trading_engine():
                     total_unrealized_profit_loss += pnl_dollars
                     pnl_pct = (pnl_dollars / state["total_cost"]) * 100
 
+                    # Fixed: Pulling correct key 'trailing_stop_pct' from config
+                    trailing_stop_percentage = global_settings.get("trailing_stop_pct", 3.0)
+
                     # 1. Track peak
                     if current_price >= upper_band and pnl_pct >= 0.20:
                         if current_price > state.get("highest_seen", 0.0):
                             state["highest_seen"] = current_price
 
-                    # 2. Check for 3% drop from peak
+                    # 2. Check for drop from peak using percentage from config
                     highest_price = state.get("highest_seen", 0.0)
                     if highest_price > 0:
-                        if current_price <= highest_price * 0.97:
+                        sell_trigger_level = highest_price * (1 - (trailing_stop_percentage / 100))
+                        
+                        if current_price <= sell_trigger_level:
                             try:
                                 sell_quantity = state["coins"]
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
@@ -279,11 +288,11 @@ def run_trading_engine():
                                     sell_quantity, 
                                     execution_price, 
                                     available_usd_cash + (sell_quantity * execution_price), 
-                                    "Trailing Stop Hit"
+                                    f"Trailing Stop Hit: {trailing_stop_percentage}% drop"
                                 )
                                 state["highest_seen"] = 0.0
-                            except Exception as e:
-                                print(f"Sell Error: {e}")
+                            except Exception as error_message:
+                                print(f"Sell Error: {error_message}")
                     
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
@@ -320,7 +329,9 @@ def run_trading_engine():
         except KeyboardInterrupt:
             allow_system_sleep()
             break
-        except Exception:
+        except Exception as error_message:
+            print(f"\n{InterfaceColors.DANGER_RED}!!! CRITICAL LOOP ERROR: {error_message}")
+            print(f"{InterfaceColors.WARNING_YELLOW}Re-attempting in 10 seconds...")
             time.sleep(10)
 
 if __name__ == "__main__":
