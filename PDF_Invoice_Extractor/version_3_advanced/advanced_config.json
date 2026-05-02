@@ -1,9 +1,7 @@
 {
     "author": "omegazyph",
-    "version_type": "Advanced_Automated_Suite",
-    "input_folder_path": "C:/InvoiceProject/Input_PDFs",
-    "output_folder_path": "C:/InvoiceProject/Extracted_Results",
-    "output_filename": "final_invoice_report.csv",
-    "archive_after_processing": true,
-    "log_activity": true
+    "version_type": "Advanced_GUI_Suite",
+    "last_input_folder": "C:/Invoices/Input",
+    "last_output_folder": "C:/Invoices/Output",
+    "auto_open_report": true
 }
