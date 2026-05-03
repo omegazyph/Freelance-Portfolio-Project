@@ -107,28 +107,43 @@ class ProfessionalExtractorGUI:
         progress_frame = tk.Frame(main_frame, bg="#f0f2f5")
         progress_frame.pack(fill="x", pady=15)
         
-        self.progress_label = ttk.Label(progress_frame, text="System Ready", background="#f0f2f5", font=("Segoe UI", 9))
+        self.progress_label = ttk.Label(progress_frame, 
+                                        text="System Ready", 
+                                        background="#f0f2f5", 
+                                        font=("Segoe UI", 9)
+                                        )
         self.progress_label.pack(anchor="w")
         
-        self.progress_bar = ttk.Progressbar(progress_frame, orient="horizontal", length=100, mode="determinate")
-        self.progress_bar.pack(fill="x", pady=5)
+        self.progress_bar = ttk.Progressbar(progress_frame, 
+                                            orient="horizontal", 
+                                            length=100, 
+                                            mode="determinate"
+                                            )
+        self.progress_bar.pack(fill="x", 
+                               pady=5)
 
         # --- EXECUTION & ACTIONS SECTION ---
         button_frame = tk.Frame(main_frame, bg="#f0f2f5")
         button_frame.pack(fill="x", pady=10)
 
         self.run_btn = tk.Button(
-            button_frame, text="EXECUTE AUTOMATION", bg="#1a73e8", fg="white", 
-            font=("Segoe UI", 11, "bold"), relief="flat", height=2, cursor="hand2",
+            button_frame, 
+            text="EXECUTE AUTOMATION", 
+            bg="#1a73e8", 
+            fg="white", 
+            font=("Segoe UI", 11, "bold"), 
+            relief="flat", 
+            height=2, 
+            cursor="hand2",
             command=self.run_process
         )
         self.run_btn.pack(side="left", expand=True, fill="x", padx=(0, 5))
 
         self.open_btn = tk.Button(
-            button_frame, text="OPEN REPORT",
+            button_frame, 
+            text="OPEN REPORT",
             bg="#1a73e8", 
             fg="white", 
-            disabledforeground="white",
             font=("Segoe UI", 11, "bold"), 
             relief="flat", 
             height=2, 
@@ -136,17 +151,38 @@ class ProfessionalExtractorGUI:
             state="disabled", 
             command=self.open_result_file
         )
-        self.open_btn.pack(side="left", expand=True, fill="x", padx=(5, 0))
+        self.open_btn.pack(side="left", 
+                           expand=True, 
+                           fill="x", 
+                           padx=(5, 0)
+                           )
 
         # --- LOG SECTION ---
-        tk.Label(main_frame, text="Process Activity Log", bg="#f0f2f5", font=("Segoe UI", 9, "italic")).pack(anchor="w")
-        self.log_area = scrolledtext.ScrolledText(main_frame, width=70, height=10, font=("Consolas", 10), 
-                                                 bg="#ffffff", fg="#333333", borderwidth=1, relief="solid")
-        self.log_area.pack(expand=True, fill="both")
+        tk.Label(main_frame, 
+                 text="Process Activity Log", 
+                 bg="#f0f2f5", 
+                 font=("Segoe UI", 9, "italic")).pack(anchor="w")
+        
+        self.log_area = scrolledtext.ScrolledText(main_frame,
+                                                  width=70, 
+                                                  height=10, 
+                                                  font=("Consolas", 10), 
+                                                  bg="#ffffff", 
+                                                  fg="#333333", 
+                                                  borderwidth=1, 
+                                                  relief="solid"
+                                                  )
+        self.log_area.pack(expand=True, 
+                           fill="both"
+                           )
 
         # Footer
-        tk.Label(main_frame, text=f"Author Handle: {self.settings.get('author', 'omegazyph')}", 
-                 bg="#f0f2f5", fg="#666666", font=("Segoe UI", 8)).pack(pady=(5, 0))
+        tk.Label(main_frame, 
+                 text=f"Author Handle: {self.settings.get('author', 'omegazyph')}", 
+                 bg="#f0f2f5", 
+                 fg="#666666", 
+                 font=("Segoe UI", 8)).pack(pady=(5, 0)
+                )
 
     def browse_input(self):
         folder = filedialog.askdirectory()
@@ -163,22 +199,28 @@ class ProfessionalExtractorGUI:
     def log(self, message):
         """Append a timestamped message to the log area."""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        self.log_area.insert(tk.END, f"[{timestamp}] {message}\n")
+        self.log_area.insert(tk.END, 
+                             f"[{timestamp}] {message}\n"
+                             )
         self.log_area.see(tk.END)
         self.root.update_idletasks()
 
     def open_result_file(self):
         """Open the generated CSV file using the default Windows application."""
         output_dir = self.output_entry.get()
-        output_file = os.path.join(output_dir, "master_invoice_report.csv")
+        output_file = os.path.join(output_dir, 
+                                   "master_invoice_report.csv"
+                                   )
         if os.path.exists(output_file):
             try:
                 os.startfile(output_file)
                 self.log(f"System: Opening {output_file}")
             except Exception as e:
-                messagebox.showerror("Error", f"Could not open file: {e}")
+                messagebox.showerror("Error", 
+                                     f"Could not open file: {e}")
         else:
-            messagebox.showwarning("File Not Found", "The report file does not exist yet.")
+            messagebox.showwarning("File Not Found", 
+                                   "The report file does not exist yet.")
 
     def run_process(self):
         """Primary logic for scanning PDFs and writing to CSV."""
@@ -186,10 +228,14 @@ class ProfessionalExtractorGUI:
         output_dir = self.output_entry.get()
 
         if not os.path.exists(input_dir) or not input_dir:
-            messagebox.showwarning("Input Required", "Please select a valid source folder containing PDFs.")
+            messagebox.showwarning("Input Required", 
+                                   "Please select a valid source folder containing PDFs."
+                                   )
             return
         if not os.path.exists(output_dir) or not output_dir:
-            messagebox.showwarning("Output Required", "Please select a valid destination folder for the CSV.")
+            messagebox.showwarning("Output Required", 
+                                   "Please select a valid destination folder for the CSV."
+                                   )
             return
 
         self.settings["last_input_folder"] = input_dir
@@ -201,7 +247,9 @@ class ProfessionalExtractorGUI:
         
         if total_files == 0:
             self.log("Notice: No PDF files found in the selected folder.")
-            messagebox.showinfo("No Files", "The selected folder does not contain any .pdf files.")
+            messagebox.showinfo("No Files", 
+                                "The selected folder does not contain any .pdf files."
+                                )
             return
 
         self.progress_bar["maximum"] = total_files
@@ -212,27 +260,49 @@ class ProfessionalExtractorGUI:
         
         try:
             with open(output_file, "a", newline="") as csv_file:
-                fieldnames = ["FileName", "ProcessedDate", "InvoiceDate", "Amount"]
-                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+                fieldnames = ["FileName", 
+                              "ProcessedDate", 
+                              "InvoiceDate", 
+                              "Amount"
+                              ]
+                writer = csv.DictWriter(csv_file, 
+                                        fieldnames=fieldnames)
                 if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
                     writer.writeheader()
 
-                for index, filename in enumerate(pdf_files, start=1):
+                for index, filename in enumerate(pdf_files, 
+                                                 start=1
+                                                 ):
                     self.log(f"Processing ({index}/{total_files}): {filename}")
                     self.progress_label.config(text=f"Extracting file {index} of {total_files}...")
                     
-                    full_path = os.path.join(input_dir, filename)
-                    with pdfplumber.open(full_path) as pdf:
-                        text = pdf.pages[0].extract_text()
-                        date_match = re.search(r"(\d{1,4}[-/]\d{1,2}[-/]\d{2,4})", text)
-                        money_match = re.search(r"\$(\d{1,3}(?:,\d{3})*(?:\.\d{2}))", text)
+                    full_path = os.path.join(input_dir, 
+                                             filename
+                                             )
+                    try:
+                        with pdfplumber.open(full_path) as pdf:
+                            # Validation: Check if the pdf is empty or puely an image
+                            first_page = pdf.pages[0] 
+                            text = first_page.page.extract_text()
+
+                            if not text or not text.strip():
+                                self.log(f"Warning: {filename} appears to be an image/scan. Skipping.")
+                                continue # moves to the next line without crashinfo[cit2:2]
+
+                            date_match = re.search(r"(\d{1,4}[-/]\d{1,2}[-/]\d{2,4})", text)
+                            money_match = re.search(r"\$(\d{1,3}(?:,\d{3})*(?:\.\d{2}))", text)
                         
-                        writer.writerow({
-                            "FileName": filename,
-                            "ProcessedDate": datetime.now().strftime("%Y-%m-%d"),
-                            "InvoiceDate": date_match.group(1) if date_match else "N/A",
-                            "Amount": money_match.group(1) if money_match else "0.00"
-                        })
+                            writer.writerow({
+                                "FileName": filename,
+                                "ProcessedDate": datetime.now().strftime("%Y-%m-%d"),
+                                "InvoiceDate": date_match.group(1) if date_match else "N/A",
+                                "Amount": money_match.group(1) if money_match else "0.00"
+                                })
+                            
+                    except Exception as file_error:
+                        # log the specific file error but keep the automation running
+                        self.log(f"Error in {filename}: {str(file_error)}")
+                        continue
                     
                     self.progress_bar["value"] = index
                     self.root.update_idletasks()
