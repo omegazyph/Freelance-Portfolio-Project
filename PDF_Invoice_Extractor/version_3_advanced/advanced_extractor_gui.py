@@ -1,11 +1,11 @@
 ################################################################################
 # Date: 2026-05-02
-# Script Name: advanced_extractor_gui.py
+# Script Name: advanced_extractor_gui_19.py
 # Author: omegazyph
 # Updated: 2026-05-05
 # Description: Professional Enterprise UI for PDF Invoice Extraction.
 #              Strict Dependency: Requires advanced_config.json to execute.
-#              Features: Flexible JSON-based Regex and Auto-Open Reports.
+#              Features: Dual CSV/Excel Export with Auto-Adjusting Columns.
 ################################################################################
 
 import os
@@ -13,6 +13,7 @@ import json
 import csv
 import re
 import pdfplumber
+import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 from tkinter import ttk 
@@ -62,12 +63,8 @@ class ProfessionalExtractorGUI:
         self.create_ui()
 
     def load_settings(self):
-        """
-        Strictly load settings from JSON. Program exits if file is missing or invalid.
-        """
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"Missing required file: {self.config_path}")
-
         try:
             with open(self.config_path, "r") as file:
                 return json.load(file)
@@ -75,9 +72,6 @@ class ProfessionalExtractorGUI:
             raise Exception(f"Failed to parse advanced_config.json: {error}")
 
     def save_settings(self):
-        """
-        Save the current folder selections back to the configuration JSON file.
-        """
         try:
             with open(self.config_path, "w") as file:
                 json.dump(self.settings, file, indent=4)
@@ -85,9 +79,6 @@ class ProfessionalExtractorGUI:
             self.log(f"Warning: Could not save session settings: {save_error}")
 
     def create_ui(self):
-        """
-        Construct the graphical interface using settings from the JSON.
-        """
         main_frame = tk.Frame(self.root, bg="#f0f2f5", padx=20, pady=10)
         main_frame.pack(expand=True, fill="both")
 
@@ -114,7 +105,7 @@ class ProfessionalExtractorGUI:
         self.input_entry.pack(side="left", expand=True, fill="x", padx=(0, 5))
         ttk.Button(input_row, text="Browse", command=self.browse_input).pack(side="right")
 
-        ttk.Label(selection_frame, text="Destination Folder (CSV):", background="white").pack(anchor="w")
+        ttk.Label(selection_frame, text="Destination Folder (Results):", background="white").pack(anchor="w")
         output_row = tk.Frame(selection_frame, bg="white")
         output_row.pack(fill="x")
         self.output_entry = ttk.Entry(output_row)
@@ -139,7 +130,7 @@ class ProfessionalExtractorGUI:
         self.source_button = tk.Button(button_sidebar, text="SOURCE FOLDER", bg="#5f6368", fg="white", font=("Segoe UI", 11, "bold"), relief="flat", height=2, width=20, command=self.open_source_folder)
         self.source_button.pack(pady=5)
 
-        self.open_button = tk.Button(button_sidebar, text="OPEN REPORT", bg="#1a73e8", fg="white", font=("Segoe UI", 11, "bold"), relief="flat", height=2, width=20, state="disabled", command=self.open_result_file)
+        self.open_button = tk.Button(button_sidebar, text="OPEN EXCEL", bg="#1a73e8", fg="white", font=("Segoe UI", 11, "bold"), relief="flat", height=2, width=20, state="disabled", command=self.open_result_file)
         self.open_button.pack(pady=5)
 
         self.log_area = scrolledtext.ScrolledText(work_area, width=50, height=12, font=("Consolas", 10), bg="#ffffff", fg="#333333", borderwidth=1, relief="solid")
@@ -166,7 +157,7 @@ class ProfessionalExtractorGUI:
         self.root.update_idletasks()
 
     def open_result_file(self):
-        path = os.path.join(self.output_entry.get(), "master_invoice_report.csv")
+        path = os.path.join(self.output_entry.get(), "master_invoice_report.xlsx")
         if os.path.exists(path):
             try:
                 os.startfile(path)
@@ -198,7 +189,6 @@ class ProfessionalExtractorGUI:
             self.log("No PDFs found.")
             return
 
-        # Load flexible patterns from JSON[cite: 5]
         patterns = self.settings.get("extraction_patterns")
         date_regexes = patterns.get("date_patterns")
         amount_regexes = patterns.get("amount_patterns")
@@ -206,12 +196,14 @@ class ProfessionalExtractorGUI:
         self.progress_bar["maximum"] = len(pdf_files)
         self.run_button.config(state="disabled")
 
-        output_file = os.path.join(out_dir, "master_invoice_report.csv")
+        output_file_csv = os.path.join(out_dir, "master_invoice_report.csv")
+        output_file_xlsx = os.path.join(out_dir, "master_invoice_report.xlsx")
 
         try:
-            with open(output_file, "a", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=["FileName", "ProcessedDate", "InvoiceDate", "Amount"])
-                if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
+            # --- START ORIGINAL CSV LOGIC ---
+            with open(output_file_csv, "a", newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=["File Name", "Processed Date", "Invoice Date", "Amount"])
+                if not os.path.exists(output_file_csv) or os.path.getsize(output_file_csv) == 0:
                     writer.writeheader()
 
                 for index, filename in enumerate(pdf_files, 1):
@@ -222,21 +214,18 @@ class ProfessionalExtractorGUI:
                     total_amount = "0.00"
 
                     with pdfplumber.open(full_path) as pdf:
-                        # Scan all pages for data[cite: 5]
                         full_text = ""
                         for page in pdf.pages:
                             page_text = page.extract_text()
                             if page_text:
                                 full_text += page_text + "\n"
 
-                        # Try Date Patterns
                         for pattern in date_regexes:
                             match = re.search(pattern, full_text, re.IGNORECASE)
                             if match:
                                 invoice_date = match.group(1)
                                 break 
 
-                        # Try Amount Patterns
                         for pattern in amount_regexes:
                             match = re.search(pattern, full_text, re.IGNORECASE)
                             if match:
@@ -244,19 +233,37 @@ class ProfessionalExtractorGUI:
                                 break
 
                         writer.writerow({
-                            "FileName": filename,
-                            "ProcessedDate": datetime.now().strftime("%Y-%m-%d"),
-                            "InvoiceDate": invoice_date,
+                            "File Name": filename,
+                            "Processed Date": datetime.now().strftime("%Y-%m-%d"),
+                            "Invoice Date": invoice_date,
                             "Amount": total_amount
                         })
 
                     self.progress_bar["value"] = index
                     self.root.update_idletasks()
+            # --- END ORIGINAL CSV LOGIC ---
 
-            self.log("Extraction complete.")
+            # NEW: Convert CSV to Excel with Auto-Adjusting Columns
+            self.log("Finalizing Excel report layout...")
+            df = pd.read_csv(output_file_csv)
+            
+            with pd.ExcelWriter(output_file_xlsx, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Invoices')
+                worksheet = writer.sheets['Invoices']
+                
+                # Automatically expand columns based on content length
+                for idx, col in enumerate(df.columns):
+                    series = df[col]
+                    # Calculate max length of content in the column
+                    max_len = max((
+                        series.astype(str).map(len).max(),
+                        len(str(series.name))
+                    )) + 2 # Add padding for readability
+                    worksheet.column_dimensions[chr(65 + idx)].width = max_len
+
+            self.log("Extraction complete. Excel file ready.")
             self.open_button.config(state="normal")
             
-            # Restored Auto-Open Feature[cite: 5]
             if self.settings.get("auto_open_report"):
                 self.open_result_file()
 
