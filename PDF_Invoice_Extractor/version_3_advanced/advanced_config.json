@@ -2,6 +2,7 @@
     "author": "omegazyph",
     "version_type": "Advanced_GUI_Suite",
     "header_name": "PDF Data Automation Suite",
+    "report_headers": ["File Name", "Processed Date", "Invoice Date", "Amount", "Status"],
     "extraction_patterns": {
         "date_patterns": [
             "(\\d{1,4}[-/]\\d{1,2}[-/]\\d{2,4})",

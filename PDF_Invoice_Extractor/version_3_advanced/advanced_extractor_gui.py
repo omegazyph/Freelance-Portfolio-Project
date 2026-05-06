@@ -2,7 +2,7 @@
 # Date: 2026-05-02
 # Script Name: advanced_extractor_gui_19.py
 # Author: omegazyph
-# Updated: 2026-05-05
+# Updated: 2026-05-06
 # Description: Professional Enterprise UI for PDF Invoice Extraction.
 #              Strict Dependency: Requires advanced_config.json to execute.
 #              Features: Dual CSV/Excel Export with Auto-Adjusting Columns.
@@ -136,7 +136,7 @@ class ProfessionalExtractorGUI:
         self.log_area = scrolledtext.ScrolledText(work_area, width=50, height=12, font=("Consolas", 10), bg="#ffffff", fg="#333333", borderwidth=1, relief="solid")
         self.log_area.pack(expand=True, fill="both")
 
-        tk.Label(main_frame, text="Author: omegazyph | Sold to [Your Business Name]", bg="#f0f2f5", fg="#666666", font=("Segoe UI", 8)).pack(pady=(5, 0))
+        tk.Label(main_frame, text=f"Author: {self.settings.get('author')} | PDF Extraction Suite", bg="#f0f2f5", fg="#666666", font=("Segoe UI", 8)).pack(pady=(5, 0))
 
     def browse_input(self):
         folder = filedialog.askdirectory()
@@ -175,6 +175,7 @@ class ProfessionalExtractorGUI:
     def run_process(self):
         in_dir = self.input_entry.get()
         out_dir = self.output_entry.get()
+        fieldnames = self.settings.get("report_headers")
 
         if not os.path.exists(in_dir) or not os.path.exists(out_dir):
             messagebox.showwarning("Error", "Invalid folder paths.")
@@ -194,17 +195,17 @@ class ProfessionalExtractorGUI:
         amount_regexes = patterns.get("amount_patterns")
 
         self.progress_bar["maximum"] = len(pdf_files)
+        self.progress_bar["value"] = 0
         self.run_button.config(state="disabled")
 
         output_file_csv = os.path.join(out_dir, "master_invoice_report.csv")
         output_file_xlsx = os.path.join(out_dir, "master_invoice_report.xlsx")
 
         try:
-            # --- START ORIGINAL CSV LOGIC ---
-            with open(output_file_csv, "a", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=["File Name", "Processed Date", "Invoice Date", "Amount"])
-                if not os.path.exists(output_file_csv) or os.path.getsize(output_file_csv) == 0:
-                    writer.writeheader()
+            # Step 1: Process PDFs to CSV
+            with open(output_file_csv, "w", newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+                writer.writeheader()
 
                 for index, filename in enumerate(pdf_files, 1):
                     self.log(f"Processing: {filename}")
@@ -212,63 +213,65 @@ class ProfessionalExtractorGUI:
                     
                     invoice_date = "N/A"
                     total_amount = "0.00"
+                    status = "Success"
 
-                    with pdfplumber.open(full_path) as pdf:
-                        full_text = ""
-                        for page in pdf.pages:
-                            page_text = page.extract_text()
-                            if page_text:
-                                full_text += page_text + "\n"
+                    try:
+                        with pdfplumber.open(full_path) as pdf:
+                            full_text = "".join([page.extract_text() or "" for page in pdf.pages])
 
-                        for pattern in date_regexes:
-                            match = re.search(pattern, full_text, re.IGNORECASE)
-                            if match:
-                                invoice_date = match.group(1)
-                                break 
+                            if len(full_text.strip()) < 10:
+                                status = "Scanned Image - No Text"
+                            else:
+                                for pattern in date_regexes:
+                                    match = re.search(pattern, full_text, re.IGNORECASE)
+                                    if match:
+                                        invoice_date = match.group(1)
+                                        break 
 
-                        for pattern in amount_regexes:
-                            match = re.search(pattern, full_text, re.IGNORECASE)
-                            if match:
-                                total_amount = match.groups()[-1]
-                                break
+                                for pattern in amount_regexes:
+                                    match = re.search(pattern, full_text, re.IGNORECASE)
+                                    if match:
+                                        total_amount = match.groups()[-1]
+                                        break
 
                         writer.writerow({
-                            "File Name": filename,
-                            "Processed Date": datetime.now().strftime("%Y-%m-%d"),
-                            "Invoice Date": invoice_date,
-                            "Amount": total_amount
+                            fieldnames[0]: filename,
+                            fieldnames[1]: datetime.now().strftime("%Y-%m-%d"),
+                            fieldnames[2]: invoice_date,
+                            fieldnames[3]: total_amount,
+                            fieldnames[4]: status
                         })
-
+                    except Exception as extraction_err:
+                        self.log(f"Error in {filename}: {extraction_err}")
+                    
                     self.progress_bar["value"] = index
                     self.root.update_idletasks()
-            # --- END ORIGINAL CSV LOGIC ---
 
-            # NEW: Convert CSV to Excel with Auto-Adjusting Columns
-            self.log("Finalizing Excel report layout...")
+            self.log("CSV Report generated.")
+
+            # Step 2: Convert to Excel with Auto-Adjust
+            self.log("Converting to Excel and formatting...")
             df = pd.read_csv(output_file_csv)
-            
             with pd.ExcelWriter(output_file_xlsx, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False, sheet_name='Invoices')
                 worksheet = writer.sheets['Invoices']
                 
-                # Automatically expand columns based on content length
                 for idx, col in enumerate(df.columns):
                     series = df[col]
-                    # Calculate max length of content in the column
                     max_len = max((
                         series.astype(str).map(len).max(),
                         len(str(series.name))
-                    )) + 2 # Add padding for readability
+                    )) + 2
                     worksheet.column_dimensions[chr(65 + idx)].width = max_len
 
-            self.log("Extraction complete. Excel file ready.")
+            self.log("Final Report Ready (Excel).")
             self.open_button.config(state="normal")
             
             if self.settings.get("auto_open_report"):
                 self.open_result_file()
 
         except Exception as e:
-            self.log(f"Error: {e}")
+            self.log(f"Critical System Error: {e}")
         finally:
             self.run_button.config(state="normal")
 
