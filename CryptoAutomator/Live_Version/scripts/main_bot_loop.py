@@ -85,12 +85,20 @@ def record_successful_trade(symbol, side, amount, price, remaining_balance, note
         csv_file.flush()
         os.fsync(csv_file.fileno())
 
-def record_error_to_log(error_message):
-    """Saves errors to a persistent text file for troubleshooting."""
-    error_log_path = project_root_directory / "error_log.txt"
+def record_error_to_log(error_type, error_message):
+    """Saves errors to a structed CSV file for troubleshooting."""
+    error_log_path = project_root_directory / "error_log.csv"
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with open(error_log_path, mode="a", encoding="utf-8") as f:
-        f.write(f"[{time_stamp}] {error_message}\n")
+    file_exists = os.path.isfile(error_log_path)
+
+    with open(error_log_path, mode="a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        # add the header only if the file is being created for the first time
+        if not file_exists:
+            writer.writerow(["Timestamp", "Error Type", "Message"])
+
+        writer.writerow([time_stamp, error_type, error_message])
 
 def get_recent_activity_from_csv():
     _, log_path = get_required_file_paths()
@@ -263,7 +271,7 @@ def run_trading_engine():
                                     state["lowest_seen_price"] = 0.0
                                 except Exception as error_message:
                                     print(f"somthing worng in Waiting block {error_message}")
-                                    record_error_to_log(f"BUY ERROR ({active_symbol}): {error_message}")
+                                    record_error_to_log("BUY_ORDER", str(error_message))
                                     
                             else:
                                 insufficient_funds_warning_active = True
@@ -306,7 +314,7 @@ def run_trading_engine():
                                 state["highest_seen"] = 0.0
                             except Exception as error_message:
                                 print(f"Sell Error: {error_message}")
-                                record_error_to_log(f"SELL ERROR ({active_symbol}): {error_message}")
+                                record_error_to_log("SELL_ORDER", str(error_message) )
 
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
@@ -345,7 +353,7 @@ def run_trading_engine():
             break
         except Exception as error_message:
             print(f"\n{InterfaceColors.DANGER_RED}!!! CRITICAL LOOP ERROR: {error_message}")
-            record_error_to_log(f"CRITICAL SYSTEM ERROR: {error_message}")
+            record_error_to_log("CRITICAL", str(error_message))
             print(f"{InterfaceColors.WARNING_YELLOW}Re-attempting in 10 seconds...")
             time.sleep(10)
 
