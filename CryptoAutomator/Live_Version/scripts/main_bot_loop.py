@@ -183,13 +183,15 @@ def run_trading_engine():
         "secret": os.getenv("CRYPTO_COM_SECRET"),
         "enableRateLimit": True
     })
-    
 
+    # --- STARTUP Config ---
     current_portfolio = restore_portfolio_from_log()
+    recent_activity_ram = get_recent_activity_from_csv()
+    settings = load_trading_configuration()
 
     while True:
         try:
-            settings = load_trading_configuration()
+            
             trading_pairs_list = settings["trading_pairs"]
             global_settings = settings.get("global_settings", {})
 
@@ -275,6 +277,13 @@ def run_trading_engine():
                                     state["coins"] = execution_quantity
                                     state["total_cost"] = execution_quantity * execution_price
                                     state["lowest_seen_price"] = 0.0
+
+                                    # update the ram activity list
+                                    timestamp = time.strftime("%H:%M:%S")
+                                    recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.SUCCESS_GREEN}LIVE_BUY {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Buy: {trailing_buy_percentage}% bounce")
+                                    recent_activity_ram = recent_activity_ram[:10]
+
+
                                 except Exception as error_message:
                                     print(f"somthing worng in Waiting block {error_message}")
                                     record_error_to_log("BUY_ORDER", str(error_message))
@@ -322,6 +331,11 @@ def run_trading_engine():
                                 state["total_cost"] = 0.0
                                 state["highest_seen"] = 0.0
 
+                                # Update the RAM activity list
+                                timestamp = time.strftime("%H:%M:%S")
+                                recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop")
+                                recent_activity_ram = recent_activity_ram[:10] # Keep only 10
+
                             except Exception as error_message:
                                 print(f"Sell Error: {error_message}")
                                 record_error_to_log("SELL_ORDER", str(error_message) )
@@ -350,10 +364,10 @@ def run_trading_engine():
             if insufficient_funds_warning_active:
                 print(f"\n{InterfaceColors.WARNING_YELLOW}* ALERT: USD balance insufficient for trade.")
 
-            recent = get_recent_activity_from_csv()
-            if recent:
-                print(f"\n{InterfaceColors.HEADER_CYAN}RECENT TRADES (FROM LOG FILE):")
-                for line in recent:
+            
+            if recent_activity_ram:
+                print(f"\n{InterfaceColors.HEADER_CYAN}RECENT TRADES (FROM RAM):")
+                for line in recent_activity_ram:
                     print(f" {line}")
 
             time.sleep(check_interval_seconds)
