@@ -31,14 +31,14 @@ def prevent_system_sleep():
         try:
             # Re-enabled the thread state to ensure your Lenovo Legion stays awake
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_SYSTEM_REQUIRED | EXECUTION_STATE_CONTINUOUS)
-        except Exception as error_message:
+        except Exception:
             pass
 
 def allow_system_sleep():
     if os.name == 'nt':
         try:
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_CONTINUOUS)
-        except Exception as error_message:
+        except Exception:
             pass
 
 # --- DIRECTORY AND FILE PATHS ---
@@ -85,6 +85,13 @@ def record_successful_trade(symbol, side, amount, price, remaining_balance, note
         csv_file.flush()
         os.fsync(csv_file.fileno())
 
+def record_error_to_log(error_message):
+    """Saves errors to a persistent text file for troubleshooting."""
+    error_log_path = project_root_directory / "error_log.txt"
+    time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(error_log_path, mode="a", encoding="utf-8") as f:
+        f.write(f"[{time_stamp}] {error_message}\n")
+
 def get_recent_activity_from_csv():
     _, log_path = get_required_file_paths()
     recent_lines = []
@@ -105,7 +112,7 @@ def get_recent_activity_from_csv():
                 recent_lines.insert(0, f"[{timestamp}] {color}{side:<10}{InterfaceColors.RESET_STYLE} {symbol} {note}")
     except Exception as error_message:
         print(f"somthing wrong in get_recent_activity_from_csv {error_message}")
-    
+        record_error_to_log(f"Activity Log Error: {error_message}")    
     return recent_lines
 
 def restore_portfolio_from_log():
@@ -256,6 +263,7 @@ def run_trading_engine():
                                     state["lowest_seen_price"] = 0.0
                                 except Exception as error_message:
                                     print(f"somthing worng in Waiting block {error_message}")
+                                    record_error_to_log(f"BUY ERROR ({active_symbol}): {error_message}")
                                     
                             else:
                                 insufficient_funds_warning_active = True
@@ -298,7 +306,8 @@ def run_trading_engine():
                                 state["highest_seen"] = 0.0
                             except Exception as error_message:
                                 print(f"Sell Error: {error_message}")
-                    
+                                record_error_to_log(f"SELL ERROR ({active_symbol}): {error_message}")
+
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
                         f"{active_symbol:<10} "
@@ -336,6 +345,7 @@ def run_trading_engine():
             break
         except Exception as error_message:
             print(f"\n{InterfaceColors.DANGER_RED}!!! CRITICAL LOOP ERROR: {error_message}")
+            record_error_to_log(f"CRITICAL SYSTEM ERROR: {error_message}")
             print(f"{InterfaceColors.WARNING_YELLOW}Re-attempting in 10 seconds...")
             time.sleep(10)
 
