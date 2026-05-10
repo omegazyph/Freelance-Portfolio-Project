@@ -176,9 +176,14 @@ def run_trading_engine():
             global_settings = settings.get("global_settings", {})
 
             starting_bal = global_settings.get("starting_balance", 0.0)
-            trade_dollar_amount = global_settings.get("trade_dollar_amount", 2.0)
+            trade_dollar_amount = global_settings.get("trade_dollar_amount")
             check_interval_seconds = global_settings.get("check_interval_seconds", 30)
             
+            # gets the triling stop enable and disab;e form the json file
+            trailing_stop_enabled = global_settings.get("trailing_stop_enabled", False)
+
+            # loads the value of the safety net
+            safety_net = global_settings.get("safety_net")
             balance_response = exchange_client.fetch_balance()
             settled_usd = balance_response.get('total', {}).get("USD", 0.0)
             instant_credit = balance_response.get('total', {}).get("USD-CREDIT", 0.0)
@@ -231,7 +236,7 @@ def run_trading_engine():
                     if lowest_recorded_price > 0:
                         buy_trigger_level = lowest_recorded_price * (1 + (trailing_buy_percentage / 100))
                         
-                        if current_price >= buy_trigger_level:
+                        if trailing_stop_enabled and current_price >= buy_trigger_level:
                             if available_usd_cash >= trade_dollar_amount:
                                 try:
                                     quantity_to_purchase = trade_dollar_amount / current_price
@@ -264,10 +269,10 @@ def run_trading_engine():
                     pnl_pct = (pnl_dollars / state["total_cost"]) * 100
 
                     # Fixed: Pulling correct key 'trailing_stop_pct' from config
-                    trailing_stop_percentage = global_settings.get("trailing_stop_pct", 3.0)
+                    trailing_stop_percentage = global_settings.get("trailing_stop_pct")
 
                     # 1. Track peak
-                    if current_price >= upper_band and pnl_pct >= 0.20:
+                    if current_price >= upper_band and pnl_pct >= safety_net:
                         if current_price > state.get("highest_seen", 0.0):
                             state["highest_seen"] = current_price
 
@@ -276,7 +281,7 @@ def run_trading_engine():
                     if highest_price > 0:
                         sell_trigger_level = highest_price * (1 - (trailing_stop_percentage / 100))
                         
-                        if current_price <= sell_trigger_level:
+                        if trailing_stop_enabled and current_price <= sell_trigger_level:
                             try:
                                 sell_quantity = state["coins"]
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
