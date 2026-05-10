@@ -119,7 +119,7 @@ def get_recent_activity_from_csv():
                 color = InterfaceColors.SUCCESS_GREEN if "BUY" in side else InterfaceColors.DANGER_RED
                 recent_lines.insert(0, f"[{timestamp}] {color}{side:<10}{InterfaceColors.RESET_STYLE} {symbol} {note}")
     except Exception as error_message:
-        print(f"somthing wrong in get_recent_activity_from_csv {error_message}")
+        print(f"Activity Log Error {error_message}")
         record_error_to_log(f"Activity Log Error: {error_message}")    
     return recent_lines
 
@@ -172,7 +172,8 @@ def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
         latest = df.iloc[-1]
         return latest['lower'], latest['upper'], latest['close']
     except Exception as error_message:
-        print(f"Somthing is wrong in Cluculate_bollinger_bands {error_message}")
+        print(f"Bollinger Band Error: {error_message}")
+        record_error_to_log("Bollinger Band Error", str(error_message))
         return None, None, None
 
 def run_trading_engine():
@@ -183,9 +184,11 @@ def run_trading_engine():
         "enableRateLimit": True
     })
     
+
+    current_portfolio = restore_portfolio_from_log()
+
     while True:
         try:
-            current_portfolio = restore_portfolio_from_log()
             settings = load_trading_configuration()
             trading_pairs_list = settings["trading_pairs"]
             global_settings = settings.get("global_settings", {})
@@ -268,6 +271,9 @@ def run_trading_engine():
                                         available_usd_cash - trade_dollar_amount, 
                                         f"Trailing Buy: {trailing_buy_percentage}% bounce"
                                     )
+                                    state["status"] = "HOLDING"
+                                    state["coins"] = execution_quantity
+                                    state["total_cost"] = execution_quantity * execution_price
                                     state["lowest_seen_price"] = 0.0
                                 except Exception as error_message:
                                     print(f"somthing worng in Waiting block {error_message}")
@@ -311,7 +317,11 @@ def run_trading_engine():
                                     available_usd_cash + (sell_quantity * execution_price), 
                                     f"Trailing Stop Hit: {trailing_stop_percentage}% drop"
                                 )
+                                state["status"] = "WAITING"
+                                state["coins"] = 0.0
+                                state["total_cost"] = 0.0
                                 state["highest_seen"] = 0.0
+
                             except Exception as error_message:
                                 print(f"Sell Error: {error_message}")
                                 record_error_to_log("SELL_ORDER", str(error_message) )
