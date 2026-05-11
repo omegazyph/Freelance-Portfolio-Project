@@ -64,15 +64,16 @@ def clear_terminal_screen():
 def get_required_file_paths():
     configuration_file_path = project_root_directory / "config.json"
     trading_activity_log_path = project_root_directory / "live_trade_log.csv"
-    return configuration_file_path, trading_activity_log_path
+    error_log_path = project_root_directory / "error_log.csv"
+    return configuration_file_path, trading_activity_log_path, error_log_path
 
 def load_trading_configuration():
-    configuration_path, _ = get_required_file_paths()
+    configuration_path, _, _ = get_required_file_paths()
     with open(configuration_path, mode="r", encoding="utf-8") as file:
         return json.load(file)
 
 def record_successful_trade(symbol, side, amount, price, remaining_balance, note):
-    _, log_path = get_required_file_paths()
+    _, log_path, _ = get_required_file_paths()
     time_full = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(log_path)
     
@@ -119,7 +120,7 @@ def record_error_to_log(error_type, error_message):
         pass # Prevent the bot from crashing if the disk is busy
 
 def get_recent_activity_from_csv():
-    _, log_path = get_required_file_paths()
+    _, log_path, _ = get_required_file_paths()
     recent_lines = []
     if not os.path.isfile(log_path):
         return recent_lines
@@ -142,7 +143,7 @@ def get_recent_activity_from_csv():
     return recent_lines
 
 def restore_portfolio_from_log():
-    _, log_path = get_required_file_paths()
+    _, log_path, _ = get_required_file_paths()
     active_holdings = {}
     if not os.path.isfile(log_path):
         return active_holdings
