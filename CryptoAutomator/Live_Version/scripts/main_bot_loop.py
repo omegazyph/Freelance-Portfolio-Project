@@ -91,14 +91,32 @@ def record_error_to_log(error_type, error_message):
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(error_log_path)
 
-    with open(error_log_path, mode="a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+    try:
+        # Append the new error
+        with open(error_log_path, mode="a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            
+            # add the header only if the file is being created for the first time
+            if not file_exists:
+                writer.writerow(["Timestamp", "Error Type", "Message"])
+            writer.writerow([time_stamp, error_type, error_message])
 
-        # add the header only if the file is being created for the first time
-        if not file_exists:
-            writer.writerow(["Timestamp", "Error Type", "Message"])
+        # self-cleaning: keep only last 50 errors
+        if os.path.exists(error_log_path):
+            with open(error_log_path, mode="r", encoding="utf-8") as f:
+                lines = list(csv.reader(f))
 
-        writer.writerow([time_stamp, error_type, error_message])
+                #if log exceeds 50 error (plus header), rewrite with only the newest 50
+                if len(lines) > 51:
+                    header = lines[0]
+                    new_data = lines[-50:]
+                    with open(error_log_path, mode="w", newline="", encoding="utf-8") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(header)
+                        writer.writerow(new_data)
+
+    except Exception:
+        pass # Prevent the bot from crashing if the disk is busy
 
 def get_recent_activity_from_csv():
     _, log_path = get_required_file_paths()
@@ -285,8 +303,8 @@ def run_trading_engine():
 
 
                                 except Exception as error_message:
-                                    print(f"somthing worng in Waiting block {error_message}")
-                                    record_error_to_log("BUY_ORDER", str(error_message))
+                                    print(f"Buy Error for {active_symbol}: {error_message}")
+                                    record_error_to_log("BUY_ORDER", f"[{active_symbol}] {str(error_message)}")
                                     
                             else:
                                 insufficient_funds_warning_active = True
@@ -337,8 +355,8 @@ def run_trading_engine():
                                 recent_activity_ram = recent_activity_ram[:10] # Keep only 10
 
                             except Exception as error_message:
-                                print(f"Sell Error: {error_message}")
-                                record_error_to_log("SELL_ORDER", str(error_message) )
+                                print(f"Sell Error for {active_symbol}: {error_message}")
+                                record_error_to_log("SELL_ORDER", f"[{active_symbol}] {str(error_message)}")
 
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
