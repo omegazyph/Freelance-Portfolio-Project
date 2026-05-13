@@ -88,9 +88,18 @@ def record_successful_trade(symbol, side, amount, price, remaining_balance, note
 
 def record_error_to_log(error_type, error_message):
     """Saves errors to a structed CSV file for troubleshooting."""
-    error_log_path = project_root_directory / "error_log.csv"
+    _, _, error_log_path = get_required_file_paths()
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(error_log_path)
+
+    #------ new code -----
+    # --cleaning Logic ---
+    # Takes only the frist line of error to avid massive HTML 502/Cloud fare blocks
+    msg_str = str(error_message).strip()
+    clean_msg = msg_str.split('\n')[0]
+    if len(clean_msg) > 150:
+        clean_msg = clean_msg[:147] + "..."
+    #--------------------------------------------
 
     try:
         # Append the new error
@@ -111,10 +120,10 @@ def record_error_to_log(error_type, error_message):
                 if len(lines) > 51:
                     header = lines[0]
                     new_data = lines[-50:]
-                    with open(error_log_path, mode="w", newline="", encoding="utf-8") as f:
-                        writer = csv.writer(f)
+                    with open(error_log_path, mode="w", newline="", encoding="utf-8") as f_new:
+                        writer = csv.writer(f_new)
                         writer.writerow(header)
-                        writer.writerow(new_data)
+                        writer.writerows(new_data)
 
     except Exception:
         pass # Prevent the bot from crashing if the disk is busy
@@ -139,7 +148,8 @@ def get_recent_activity_from_csv():
                 recent_lines.insert(0, f"[{timestamp}] {color}{side:<10}{InterfaceColors.RESET_STYLE} {symbol} {note}")
     except Exception as error_message:
         print(f"Activity Log Error {error_message}")
-        record_error_to_log(f"Activity Log Error: {error_message}")    
+        record_error_to_log("Activity_LOG", str(error_message))
+            
     return recent_lines
 
 def restore_portfolio_from_log():
@@ -178,6 +188,7 @@ def restore_portfolio_from_log():
                     }
     except Exception as error_message:
         print(f"somthing worng in restore_portfolio_from_log {error_message}")
+        record_error_to_log("RESTORE_ERROR", str(error_message))
     return active_holdings
 
 def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
