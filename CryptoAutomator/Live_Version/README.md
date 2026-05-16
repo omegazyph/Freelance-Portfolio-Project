@@ -96,3 +96,5 @@ alias bot='journalctl -u cryptobot.service -f -n 30 -q --output cat | grep -v "T
 ### 📜 License
 
 This project is for educational and personal use. Trading cryptocurrency involves significant risk.
+
+### I'm still working on the bot so there will be changes to the bot that i did not write down yet
