@@ -92,14 +92,12 @@ def record_error_to_log(error_type, error_message):
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(error_log_path)
 
-    #------ new code -----
     # --cleaning Logic ---
-    # Takes only the frist line of error to avid massive HTML 502/Cloud fare blocks
+    # Takes only the first line of error to avoid massive HTML 502/Cloud fare blocks
     msg_str = str(error_message).strip()
     clean_msg = msg_str.split('\n')[0]
     if len(clean_msg) > 150:
         clean_msg = clean_msg[:147] + "..."
-    #--------------------------------------------
 
     try:
         # Append the new error
@@ -187,7 +185,6 @@ def restore_portfolio_from_log():
                         "lowest_seen_price": float('inf')
                     }
     except Exception as error_message:
-        print(f"somthing worng in restore_portfolio_from_log {error_message}")
         record_error_to_log("RESTORE_ERROR", str(error_message))
     return active_holdings
 
@@ -229,7 +226,7 @@ def run_trading_engine():
             trade_dollar_amount = global_settings.get("trade_dollar_amount")
             check_interval_seconds = global_settings.get("check_interval_seconds")
             
-            # gets the triling stop enable and disab;e form the json file
+            # gets the trailing stop enable and disable from the json file
             trailing_stop_enabled = global_settings.get("trailing_stop_enabled", False)
 
             max_open_positions = global_settings.get("max_open_positions")
