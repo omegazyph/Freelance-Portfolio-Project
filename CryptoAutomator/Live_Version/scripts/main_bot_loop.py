@@ -233,8 +233,10 @@ def run_trading_engine():
 
             trailing_buy_percentage = global_settings.get("trailing_buy_percentage", 1.0)
 
-            # loads the value of the safety net
+            # loads the value of the safety net from json file
             safety_net = global_settings.get("safety_net")
+            stop_loss_enabled = global_settings.get("stop_loss_enabled", False)
+            stop_loss_pct = global_settings.get("stop_loss_pct")
             balance_response = exchange_client.fetch_balance()
             settled_usd = balance_response.get('total', {}).get("USD", 0.0)
             instant_credit = balance_response.get('total', {}).get("USD-CREDIT", 0.0)
@@ -337,6 +339,31 @@ def run_trading_engine():
 
                     # Fixed: Pulling correct key 'trailing_stop_pct' from config
                     trailing_stop_percentage = global_settings.get("trailing_stop_pct")
+
+                    # 0. Hard stop loss check
+                    if stop_loss_enabled and pnl_pct <= -stop_loss_pct:
+                        try:
+                            sell_quantity = state["coins"]
+                            order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
+                            execution_price = order.get('price') if order.get('price') else current_price
+                            record_successful_trade(
+                                active_symbol,
+                                "LIVE_SELL",
+                                sell_quantity,
+                                execution_price,
+                                available_usd_cash + (sell_quantity * execution_price),
+                                f"Stop Loss Hit: -{stop_loss_pct}%"
+                            )
+                            state["status"] = "WAITING"
+                            state["coins"] = 0.0
+                            state["total_cost"] = 0.0
+                            state["highest_seen"] = 0.0
+                            state["lowest_seen_price"] = float('inf')
+                            timestamp = time.strftime("%H:%M:%S")
+                            recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Stop Loss Hit: -{stop_loss_pct}%")
+                            recent_activity_ram = recent_activity_ram[:10]
+                        except Exception as error_message:
+                            record_error_to_log("STOP_LOSS", f"[{active_symbol}] {str(error_message)}")
 
                     # 1. Track peak
                     if current_price >= upper_band and pnl_pct >= safety_net:
