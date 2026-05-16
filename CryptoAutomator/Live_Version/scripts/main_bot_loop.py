@@ -109,7 +109,7 @@ def record_error_to_log(error_type, error_message):
             # add the header only if the file is being created for the first time
             if not file_exists:
                 writer.writerow(["Timestamp", "Error Type", "Message"])
-            writer.writerow([time_stamp, error_type, error_message])
+            writer.writerow([time_stamp, error_type, clean_msg])
 
         # self-cleaning: keep only last 50 errors
         if os.path.exists(error_log_path):
@@ -227,10 +227,14 @@ def run_trading_engine():
 
             starting_bal = global_settings.get("starting_balance", 0.0)
             trade_dollar_amount = global_settings.get("trade_dollar_amount")
-            check_interval_seconds = global_settings.get("check_interval_seconds", 30)
+            check_interval_seconds = global_settings.get("check_interval_seconds")
             
             # gets the triling stop enable and disab;e form the json file
             trailing_stop_enabled = global_settings.get("trailing_stop_enabled", False)
+
+            max_open_positions = global_settings.get("max_open_positions")
+
+            trailing_buy_percentage = global_settings.get("trailing_buy_percentage", 1.0)
 
             # loads the value of the safety net
             safety_net = global_settings.get("safety_net")
@@ -276,7 +280,7 @@ def run_trading_engine():
                         f"BUY AT: ${lower_band:<10,.4f}"
                     )
                     
-                    trailing_buy_percentage = global_settings.get("trailing_buy_percentage", 1.0)
+                    
                     
                     if current_price <= lower_band:
                         if current_price < state.get("lowest_seen_price", 999999.0):
@@ -287,7 +291,8 @@ def run_trading_engine():
                         buy_trigger_level = lowest_recorded_price * (1 + (trailing_buy_percentage / 100))
                         
                         if trailing_stop_enabled and current_price >= buy_trigger_level:
-                            if available_usd_cash >= trade_dollar_amount:
+                            coins_held = sum(1 for s in current_portfolio.values() if s["status"] == "HOLDING")
+                            if available_usd_cash >= trade_dollar_amount and coins_held < max_open_positions:
                                 try:
                                     quantity_to_purchase = trade_dollar_amount / current_price
                                     order_response = exchange_client.create_market_buy_order(active_symbol, quantity_to_purchase)
