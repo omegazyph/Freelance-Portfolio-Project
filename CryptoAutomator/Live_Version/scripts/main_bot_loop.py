@@ -246,6 +246,7 @@ def run_trading_engine():
             total_unrealized_profit_loss = 0.0
             dashboard_data_rows = []
             insufficient_funds_warning_active = False
+            max_positions_warning_active = False
 
             for pair_info in trading_pairs_list:
                 if not pair_info.get("enabled", True):
@@ -287,12 +288,17 @@ def run_trading_engine():
                             state["lowest_seen_price"] = current_price
 
                     lowest_recorded_price = state.get("lowest_seen_price", 0.0)
-                    if lowest_recorded_price > 0:
+                    if lowest_recorded_price < float('inf'):
                         buy_trigger_level = lowest_recorded_price * (1 + (trailing_buy_percentage / 100))
                         
                         if trailing_stop_enabled and current_price >= buy_trigger_level:
                             coins_held = sum(1 for s in current_portfolio.values() if s["status"] == "HOLDING")
-                            if available_usd_cash >= trade_dollar_amount and coins_held < max_open_positions:
+                           
+                            if coins_held >= max_open_positions:
+                                max_positions_warning_active = True
+                            elif available_usd_cash < trade_dollar_amount:
+                                insufficient_funds_warning_active = True
+                            else:
                                 try:
                                     quantity_to_purchase = trade_dollar_amount / current_price
                                     order_response = exchange_client.create_market_buy_order(active_symbol, quantity_to_purchase)
@@ -311,7 +317,7 @@ def run_trading_engine():
                                     state["status"] = "HOLDING"
                                     state["coins"] = execution_quantity
                                     state["total_cost"] = execution_quantity * execution_price
-                                    state["lowest_seen_price"] = 0.0
+                                    state["lowest_seen_price"] = float('inf')
 
                                     # update the ram activity list
                                     timestamp = time.strftime("%H:%M:%S")
@@ -323,8 +329,6 @@ def run_trading_engine():
                                     print(f"Buy Error for {active_symbol}: {error_message}")
                                     record_error_to_log("BUY_ORDER", f"[{active_symbol}] {str(error_message)}")
                                     
-                            else:
-                                insufficient_funds_warning_active = True
 
                 # --- HOLDING STATE (SEARCHING FOR SELL) ---
                 elif state["status"] == "HOLDING":
@@ -365,6 +369,7 @@ def run_trading_engine():
                                 state["coins"] = 0.0
                                 state["total_cost"] = 0.0
                                 state["highest_seen"] = 0.0
+                                state["lowest_seen_price"] = float('inf')
 
                                 # Update the RAM activity list
                                 timestamp = time.strftime("%H:%M:%S")
@@ -372,7 +377,6 @@ def run_trading_engine():
                                 recent_activity_ram = recent_activity_ram[:10] # Keep only 10
 
                             except Exception as error_message:
-                                print(f"Sell Error for {active_symbol}: {error_message}")
                                 record_error_to_log("SELL_ORDER", f"[{active_symbol}] {str(error_message)}")
 
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
@@ -395,6 +399,9 @@ def run_trading_engine():
             print("-" * 75)
             for row in dashboard_data_rows:
                 print(row)
+            
+            if max_positions_warning_active:
+                print(f"\n{InterfaceColors.WARNING_YELLOW}* ALERT: Max positions reached ({max_open_positions}).")
             
             if insufficient_funds_warning_active:
                 print(f"\n{InterfaceColors.WARNING_YELLOW}* ALERT: USD balance insufficient for trade.")
