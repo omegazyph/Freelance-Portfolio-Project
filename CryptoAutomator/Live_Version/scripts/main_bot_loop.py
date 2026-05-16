@@ -87,7 +87,7 @@ def record_successful_trade(symbol, side, amount, price, remaining_balance, note
         os.fsync(csv_file.fileno())
 
 def record_error_to_log(error_type, error_message):
-    """Saves errors to a structed CSV file for troubleshooting."""
+    """Saves errors to a structured CSV file for troubleshooting."""
     _, _, error_log_path = get_required_file_paths()
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(error_log_path)
@@ -364,6 +364,7 @@ def run_trading_engine():
                             recent_activity_ram = recent_activity_ram[:10]
                         except Exception as error_message:
                             record_error_to_log("STOP_LOSS", f"[{active_symbol}] {str(error_message)}")
+                        continue
 
                     # 1. Track peak
                     if current_price >= upper_band and pnl_pct >= safety_net:
