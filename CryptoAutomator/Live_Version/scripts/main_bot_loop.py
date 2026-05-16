@@ -173,7 +173,7 @@ def restore_portfolio_from_log():
                             "coins": 0.0, 
                             "total_cost": 0.0,
                             "highest_seen": 0.0,
-                            "lowest_seen_price": 0.0
+                            "lowest_seen_price": float('inf')
                         }
                     active_holdings[symbol]["status"] = "HOLDING"
                     active_holdings[symbol]["coins"] += amount
@@ -184,7 +184,7 @@ def restore_portfolio_from_log():
                         "coins": 0.0, 
                         "total_cost": 0.0,
                         "highest_seen": 0.0,
-                        "lowest_seen_price": 0.0
+                        "lowest_seen_price": float('inf')
                     }
     except Exception as error_message:
         print(f"somthing worng in restore_portfolio_from_log {error_message}")
@@ -266,7 +266,7 @@ def run_trading_engine():
                         "coins": 0.0, 
                         "total_cost": 0.0,
                         "highest_seen": 0.0,
-                        "lowest_seen_price": 0.0
+                        "lowest_seen_price": float('inf')
                     }
                 
                 state = current_portfolio[active_symbol]
