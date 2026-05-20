@@ -95,9 +95,17 @@ def record_error_to_log(error_type, error_message):
     # --cleaning Logic ---
     # Takes only the first line of error to avoid massive HTML 502/Cloud fare blocks
     msg_str = str(error_message).strip()
+
     clean_msg = msg_str.split('\n')[0]
-    if len(clean_msg) > 150:
-        clean_msg = clean_msg[:147] + "..."
+    
+    if "cryptocom {" in msg_str or msg_str.startswith("{"):
+        lines_flattend = " ".join(msg_str.splitlines())
+        clean_msg = " ".join(lines_flattend.split())
+    else:
+        clean_msg = msg_str.split('\n')[0]
+
+    if len(clean_msg) > 200:
+        clean_msg = clean_msg[:197] + "..."
 
     try:
         # Append the new error
@@ -222,7 +230,6 @@ def run_trading_engine():
             trading_pairs_list = settings["trading_pairs"]
             global_settings = settings.get("global_settings", {})
 
-            starting_bal = global_settings.get("starting_balance", 0.0)
             trade_dollar_amount = global_settings.get("trade_dollar_amount")
             check_interval_seconds = global_settings.get("check_interval_seconds")
             
@@ -343,9 +350,27 @@ def run_trading_engine():
                     # 0. Hard stop loss check
                     if stop_loss_enabled and pnl_pct <= -stop_loss_pct:
                         try:
-                            sell_quantity = state["coins"]
+                            # Fetch live available exchange balance
+                            wallet_balance = exchange_client.fetch_balance()
+                            actual_available_coins = wallet_balance.get(base_asset, {}).get('free', 0.0)
+
+                            # Use live wallet balance if available, otherwise fallback to memory
+                            if actual_available_coins > 0:
+                                sell_quantity = actual_available_coins
+                            else:
+                                sell_quantity = state["coins"]
+
+                            # format the number to match strict Crypto.com percison rules
+                            exchange_client.load_markets()
+                            sell_quantity = float(exchange_client.amount_to_precision(active_symbol, sell_quantity))
+
                             order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
-                            execution_price = order.get('price') if order.get('price') else current_price
+                            
+                            if order.get('price'):
+                                execution_price = order.get('price') 
+                            else:
+                                execution_price = current_price
+                                
                             record_successful_trade(
                                 active_symbol,
                                 "LIVE_SELL",
@@ -378,7 +403,20 @@ def run_trading_engine():
                         
                         if trailing_stop_enabled and current_price <= sell_trigger_level:
                             try:
-                                sell_quantity = state["coins"]
+                                # Fetch live available exchange balance for the specific coin
+                                wallet_balance = exchange_client.fetch_balance()
+                                actual_available_coins = wallet_balance.get(base_asset, {}).get('free', 0.0)
+
+                                # Use live wallet balance if available, otherwise default to memory
+                                if actual_available_coins > 0:
+                                    sell_quantity = actual_available_coins
+                                else:    
+                                    sell_quantity = state["coins"]
+
+                                # Format number to match strict Crypto.com precision rules
+                                exchange_client.load_markets()
+                                sell_quantity = float(exchange_client.amount_to_precision(active_symbol, sell_quantity))
+
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
                                 execution_price = order.get('price') if order.get('price') else current_price
                                 
@@ -399,7 +437,7 @@ def run_trading_engine():
                                 # Update the RAM activity list
                                 timestamp = time.strftime("%H:%M:%S")
                                 recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop")
-                                recent_activity_ram = recent_activity_ram[:10] # Keep only 10
+                                recent_activity_ram = recent_activity_ram[:10] # Keep only 10 lines
 
                             except Exception as error_message:
                                 record_error_to_log("SELL_ORDER", f"[{active_symbol}] {str(error_message)}")
@@ -416,7 +454,7 @@ def run_trading_engine():
             clear_terminal_screen()
             total_pnl_color = InterfaceColors.SUCCESS_GREEN if total_unrealized_profit_loss >= 0 else InterfaceColors.DANGER_RED
             print(f"{InterfaceColors.HEADER_CYAN}===========================================================================")
-            print(f" {InterfaceColors.HEADER_CYAN}WAYNE'S SENTINEL LOOP | Started: ${starting_bal:.2f} | {time.strftime('%H:%M:%S')}")
+            print(f" {InterfaceColors.HEADER_CYAN}WAYNE'S SENTINEL LOOP | {time.strftime('%H:%M:%S')}")
             print(f" {InterfaceColors.HEADER_CYAN}CASH: {InterfaceColors.RESET_STYLE}${available_usd_cash:.2f} | "
                   f"{InterfaceColors.HEADER_CYAN}UNREALIZED P/L: {total_pnl_color}${total_unrealized_profit_loss:+.2f}{InterfaceColors.RESET_STYLE}")
             print(f"{InterfaceColors.HEADER_CYAN}===========================================================================")
