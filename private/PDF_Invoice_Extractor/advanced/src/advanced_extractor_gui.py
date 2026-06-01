@@ -2,7 +2,7 @@
 # Date: 2026-05-02
 # Script Name: advanced_extractor_gui_19.py
 # Author: omegazyph
-# Updated: 2026-05-06
+# Updated: 2026-05-31
 # Description: Professional Enterprise UI for PDF Invoice Extraction.
 #              Strict Dependency: Requires advanced_config.json to execute.
 #              Features: Dual CSV/Excel Export with Auto-Adjusting Columns.
@@ -26,15 +26,18 @@ class ProfessionalExtractorGUI:
         Initialize the main application window and strictly load configurations.
         """
         self.root = root
-        
-        try:
-            if getattr(sys, 'frozen', False):
+
+        # Idenify the base executable context pathway for file access
+        if getattr(sys, 'frozen', False):
                 self.base_path = os.path.dirname(sys.executable)
-            else:
+        else:
                 self.base_path = os.path.dirname(os.path.abspath(__file__))
-            
-            self.config_path = os.path.join(self.base_path, "advanced_config.json")
-            self.settings = self.load_settings()
+
+        # Define the absolute pathway pointing to the json configuration file
+        self.config_path = os.path.join(self.base_path,"..", "config", "advanced_config.json")
+
+        
+        self.settings = self.load_settings()
             
         except Exception as startup_error:
             root_helper = tk.Tk()
