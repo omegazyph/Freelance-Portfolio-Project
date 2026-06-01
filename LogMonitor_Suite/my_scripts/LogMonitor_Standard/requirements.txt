@@ -1,3 +1,0 @@
-# omegazyph Log Monitor - Standard Version
-# Python Version: 3.10+
-# No external pip dependencies required for this tier.

@@ -1,0 +1,5 @@
+2026-02-16 18:15:46,142 - INFO - Starting organization session in: C:\Users\omega/Downloads
+2026-02-16 18:15:46,158 - INFO - SUCCESS: Moved BraveBrowserSetup-BRV015.exe to Executables
+2026-02-16 18:15:46,158 - INFO - SUCCESS: Moved eu-west-1-omegazyph-regular.ovpn to Others
+2026-02-16 18:15:46,158 - INFO - SUCCESS: Moved OpenVPN-2.6.19-I001-amd64.msi to Executables
+2026-02-16 18:15:46,158 - INFO - Session finished. Total files moved: 3
