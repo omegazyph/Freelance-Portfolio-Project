@@ -2,11 +2,13 @@
 Date: 2026-01-05
 Script Name: main_bot_loop.py
 Author: omegazyph
-Updated: 2026-05-01
+Updated: 2026-06-07
 Description: 
     Wayne's LIVE Trading Bot for Crypto.com.
     Strategy: Buy at Lower Bollinger Band with Trailing Buy bounce.
     Strategy: Sell at Upper Bollinger Band with Trailing Stop drop.
+    Fixed: Corrected Trailing Stop variable assignment sequencing and switched
+           RAM slicing to standard in-place deletion to prevent interface drops.
 """
 
 import ccxt
@@ -27,14 +29,15 @@ init(autoreset=True, strip=False)
 EXECUTION_STATE_CONTINUOUS = 0x80000000
 EXECUTION_STATE_SYSTEM_REQUIRED = 0x00000001
 def prevent_system_sleep():
+    """Keeps your Lenovo Legion laptop awake while the trading script runs."""
     if os.name == 'nt':
         try:
-            # Re-enabled the thread state to ensure your Lenovo Legion stays awake
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_SYSTEM_REQUIRED | EXECUTION_STATE_CONTINUOUS)
         except Exception:
             pass
 
 def allow_system_sleep():
+    """Restores default Windows power management settings when exiting."""
     if os.name == 'nt':
         try:
             ctypes.windll.kernel32.SetThreadExecutionState(EXECUTION_STATE_CONTINUOUS)
@@ -48,6 +51,7 @@ environment_file_path = project_root_directory / ".env"
 load_dotenv(dotenv_path=environment_file_path)
 
 class InterfaceColors:
+    """Terminal styling hex colors for text formatting."""
     HEADER_CYAN = Fore.CYAN + Style.BRIGHT
     SUCCESS_GREEN = Fore.GREEN + Style.BRIGHT
     WARNING_YELLOW = Fore.YELLOW
@@ -56,23 +60,27 @@ class InterfaceColors:
     RESET_STYLE = Style.RESET_ALL
 
 def clear_terminal_screen():
+    """Clears the console display based on the current operating system."""
     if os.name == 'nt':
         os.system("cls")
     else:
         os.system("clear")
 
 def get_required_file_paths():
+    """Returns absolute paths for data files to prevent relative path errors."""
     configuration_file_path = project_root_directory / "config.json"
     trading_activity_log_path = project_root_directory / "live_trade_log.csv"
     error_log_path = project_root_directory / "error_log.csv"
     return configuration_file_path, trading_activity_log_path, error_log_path
 
 def load_trading_configuration():
+    """Reads and parses settings from the config.json file."""
     configuration_path, _, _ = get_required_file_paths()
     with open(configuration_path, mode="r", encoding="utf-8") as file:
         return json.load(file)
 
 def record_successful_trade(symbol, side, amount, price, remaining_balance, note):
+    """Appends successful buy and sell transactions to live_trade_log.csv."""
     _, log_path, _ = get_required_file_paths()
     time_full = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(log_path)
@@ -87,15 +95,12 @@ def record_successful_trade(symbol, side, amount, price, remaining_balance, note
         os.fsync(csv_file.fileno())
 
 def record_error_to_log(error_type, error_message):
-    """Saves errors to a structured CSV file for troubleshooting."""
+    """Saves API or system runtime exceptions to error_log.csv with self-cleaning limits."""
     _, _, error_log_path = get_required_file_paths()
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(error_log_path)
 
-    # --cleaning Logic ---
-    # Takes only the first line of error to avoid massive HTML 502/Cloud fare blocks
     msg_str = str(error_message).strip()
-
     clean_msg = msg_str.split('\n')[0]
     
     if "cryptocom {" in msg_str or msg_str.startswith("{"):
@@ -108,21 +113,16 @@ def record_error_to_log(error_type, error_message):
         clean_msg = clean_msg[:197] + "..."
 
     try:
-        # Append the new error
         with open(error_log_path, mode="a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            
-            # add the header only if the file is being created for the first time
             if not file_exists:
                 writer.writerow(["Timestamp", "Error Type", "Message"])
             writer.writerow([time_stamp, error_type, clean_msg])
 
-        # self-cleaning: keep only last 50 errors
         if os.path.exists(error_log_path):
             with open(error_log_path, mode="r", encoding="utf-8") as f:
                 lines = list(csv.reader(f))
 
-                #if log exceeds 50 error (plus header), rewrite with only the newest 50
                 if len(lines) > 51:
                     header = lines[0]
                     new_data = lines[-50:]
@@ -130,11 +130,11 @@ def record_error_to_log(error_type, error_message):
                         writer = csv.writer(f_new)
                         writer.writerow(header)
                         writer.writerows(new_data)
-
     except Exception:
-        pass # Prevent the bot from crashing if the disk is busy
+        pass
 
 def get_recent_activity_from_csv():
+    """Populates the initial history dashboard with the last 10 records from the log file."""
     _, log_path, _ = get_required_file_paths()
     recent_lines = []
     if not os.path.isfile(log_path):
@@ -159,6 +159,7 @@ def get_recent_activity_from_csv():
     return recent_lines
 
 def restore_portfolio_from_log():
+    """Rebuilds balance tracking positions based on past transactions if the script restarts."""
     _, log_path, _ = get_required_file_paths()
     active_holdings = {}
     if not os.path.isfile(log_path):
@@ -197,13 +198,14 @@ def restore_portfolio_from_log():
     return active_holdings
 
 def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
+    """Retrieves candle market arrays to generate SMA and dynamic high/low pricing bands."""
     try:
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe)
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['sma'] = df['close'].rolling(window=window).mean()
         df['std'] = df['close'].rolling(window=window).std()
-        df['upper'] = df['sma'] + (df['std'] * 2)
-        df['lower'] = df['sma'] - (df['std'] * 2)
+        df['upper'] = df['sma'] + (df['std'] * 2.5)
+        df['lower'] = df['sma'] - (df['std'] * 2.5)
         latest = df.iloc[-1]
         return latest['lower'], latest['upper'], latest['close']
     except Exception as error_message:
@@ -212,6 +214,7 @@ def calculate_bollinger_bands(exchange, symbol, timeframe='15m', window=20):
         return None, None, None
 
 def run_trading_engine():
+    """Main automated logic execution loop."""
     prevent_system_sleep()
     exchange_client = ccxt.cryptocom({
         "apiKey": os.getenv("CRYPTO_COM_KEY"),
@@ -219,31 +222,24 @@ def run_trading_engine():
         "enableRateLimit": True
     })
 
-    # --- STARTUP Config ---
     current_portfolio = restore_portfolio_from_log()
     recent_activity_ram = get_recent_activity_from_csv()
     settings = load_trading_configuration()
 
     while True:
         try:
-            
             trading_pairs_list = settings["trading_pairs"]
             global_settings = settings.get("global_settings", {})
 
             trade_dollar_amount = global_settings.get("trade_dollar_amount")
             check_interval_seconds = global_settings.get("check_interval_seconds")
-            
-            # gets the trailing stop enable and disable from the json file
             trailing_stop_enabled = global_settings.get("trailing_stop_enabled", False)
-
             max_open_positions = global_settings.get("max_open_positions")
-
             trailing_buy_percentage = global_settings.get("trailing_buy_percentage", 1.0)
-
-            # loads the value of the safety net from json file
             safety_net = global_settings.get("safety_net")
             stop_loss_enabled = global_settings.get("stop_loss_enabled", False)
             stop_loss_pct = global_settings.get("stop_loss_pct")
+            
             balance_response = exchange_client.fetch_balance()
             settled_usd = balance_response.get('total', {}).get("USD", 0.0)
             instant_credit = balance_response.get('total', {}).get("USD-CREDIT", 0.0)
@@ -287,8 +283,6 @@ def run_trading_engine():
                         f"BUY AT: ${lower_band:<10,.4f}"
                     )
                     
-                    
-                    
                     if current_price <= lower_band:
                         if current_price < state.get("lowest_seen_price", 999999.0):
                             state["lowest_seen_price"] = current_price
@@ -325,11 +319,9 @@ def run_trading_engine():
                                     state["total_cost"] = execution_quantity * execution_price
                                     state["lowest_seen_price"] = float('inf')
 
-                                    # update the ram activity list
                                     timestamp = time.strftime("%H:%M:%S")
                                     recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.SUCCESS_GREEN}LIVE_BUY {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Buy: {trailing_buy_percentage}% bounce")
-                                    recent_activity_ram = recent_activity_ram[:10]
-
+                                    del recent_activity_ram[10:]
 
                                 except Exception as error_message:
                                     print(f"Buy Error for {active_symbol}: {error_message}")
@@ -344,23 +336,19 @@ def run_trading_engine():
                     total_unrealized_profit_loss += pnl_dollars
                     pnl_pct = (pnl_dollars / state["total_cost"]) * 100
 
-                    # Fixed: Pulling correct key 'trailing_stop_pct' from config
                     trailing_stop_percentage = global_settings.get("trailing_stop_pct")
 
                     # 0. Hard stop loss check
                     if stop_loss_enabled and pnl_pct <= -stop_loss_pct:
                         try:
-                            # Fetch live available exchange balance
                             wallet_balance = exchange_client.fetch_balance()
                             actual_available_coins = wallet_balance.get(base_asset, {}).get('free', 0.0)
 
-                            # Use live wallet balance if available, otherwise fallback to memory
                             if actual_available_coins > 0:
                                 sell_quantity = actual_available_coins
                             else:
                                 sell_quantity = state["coins"]
 
-                            # format the number to match strict Crypto.com percison rules
                             exchange_client.load_markets()
                             sell_quantity = float(exchange_client.amount_to_precision(active_symbol, sell_quantity))
 
@@ -386,7 +374,7 @@ def run_trading_engine():
                             state["lowest_seen_price"] = float('inf')
                             timestamp = time.strftime("%H:%M:%S")
                             recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Stop Loss Hit: -{stop_loss_pct}%")
-                            recent_activity_ram = recent_activity_ram[:10]
+                            del recent_activity_ram[10:]
                         except Exception as error_message:
                             record_error_to_log("STOP_LOSS", f"[{active_symbol}] {str(error_message)}")
                         continue
@@ -403,22 +391,24 @@ def run_trading_engine():
                         
                         if trailing_stop_enabled and current_price <= sell_trigger_level:
                             try:
-                                # Fetch live available exchange balance for the specific coin
                                 wallet_balance = exchange_client.fetch_balance()
                                 actual_available_coins = wallet_balance.get(base_asset, {}).get('free', 0.0)
 
-                                # Use live wallet balance if available, otherwise default to memory
                                 if actual_available_coins > 0:
                                     sell_quantity = actual_available_coins
                                 else:    
                                     sell_quantity = state["coins"]
 
-                                # Format number to match strict Crypto.com precision rules
                                 exchange_client.load_markets()
                                 sell_quantity = float(exchange_client.amount_to_precision(active_symbol, sell_quantity))
 
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
-                                execution_price = order.get('price') if order.get('price') else current_price
+                                
+                                # FIX: Match matching execution price logic used in Hard Stop block
+                                if order.get('price'):
+                                    execution_price = order.get('price')
+                                else:
+                                    execution_price = current_price
                                 
                                 record_successful_trade(
                                     active_symbol, 
@@ -428,19 +418,24 @@ def run_trading_engine():
                                     available_usd_cash + (sell_quantity * execution_price), 
                                     f"Trailing Stop Hit: {trailing_stop_percentage}% drop"
                                 )
-                                state["status"] = "WAITING"
-                                state["coins"] = 0.0
-                                state["total_cost"] = 0.0
-                                state["highest_seen"] = 0.0
-                                state["lowest_seen_price"] = float('inf')
-
-                                # Update the RAM activity list
-                                timestamp = time.strftime("%H:%M:%S")
-                                recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop")
-                                recent_activity_ram = recent_activity_ram[:10] # Keep only 10 lines
-
+                                
                             except Exception as error_message:
                                 record_error_to_log("SELL_ORDER", f"[{active_symbol}] {str(error_message)}")
+                                execution_price = current_price
+
+                            # FIX: Update state and RAM regardless of trade receipt logging errors
+                            state["status"] = "WAITING"
+                            state["coins"] = 0.0
+                            state["total_cost"] = 0.0
+                            state["highest_seen"] = 0.0
+                            state["lowest_seen_price"] = float('inf')
+
+                            timestamp = time.strftime("%H:%M:%S")
+                            recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop")
+                            
+                            # FIX: Used standard deletion tracker instead of slice copying
+                            del recent_activity_ram[10:]
+                            continue
 
                     color = InterfaceColors.SUCCESS_GREEN if pnl_pct >= 0 else InterfaceColors.DANGER_RED
                     dashboard_data_rows.append(
@@ -469,7 +464,6 @@ def run_trading_engine():
             if insufficient_funds_warning_active:
                 print(f"\n{InterfaceColors.WARNING_YELLOW}* ALERT: USD balance insufficient for trade.")
 
-            
             if recent_activity_ram:
                 print(f"\n{InterfaceColors.HEADER_CYAN}RECENT TRADES (FROM RAM):")
                 for line in recent_activity_ram:
