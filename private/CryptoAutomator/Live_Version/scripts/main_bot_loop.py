@@ -7,8 +7,8 @@ Description:
     Wayne's LIVE Trading Bot for Crypto.com.
     Strategy: Buy at Lower Bollinger Band with Trailing Buy bounce.
     Strategy: Sell at Upper Bollinger Band with Trailing Stop drop.
-    Fixed: Corrected Trailing Stop variable assignment sequencing and switched
-           RAM slicing to standard in-place deletion to prevent interface drops.
+    Fixed: Color-coded the entire RAM log display line based on trade behavior:
+           Yellow for Trailing Buys, Green for Trailing Sells, Red for Stop Losses.
 """
 
 import ccxt
@@ -54,7 +54,7 @@ class InterfaceColors:
     """Terminal styling hex colors for text formatting."""
     HEADER_CYAN = Fore.CYAN + Style.BRIGHT
     SUCCESS_GREEN = Fore.GREEN + Style.BRIGHT
-    WARNING_YELLOW = Fore.YELLOW
+    WARNING_YELLOW = Fore.YELLOW + Style.BRIGHT
     DANGER_RED = Fore.RED + Style.BRIGHT
     INFO_BLUE = Fore.BLUE + Style.BRIGHT
     RESET_STYLE = Style.RESET_ALL
@@ -134,7 +134,7 @@ def record_error_to_log(error_type, error_message):
         pass
 
 def get_recent_activity_from_csv():
-    """Populates the initial history dashboard with the last 10 records from the log file."""
+    """Populates the initial history dashboard with full-line color rules applied."""
     _, log_path, _ = get_required_file_paths()
     recent_lines = []
     if not os.path.isfile(log_path):
@@ -150,8 +150,18 @@ def get_recent_activity_from_csv():
                 side = row[2]
                 symbol = row[1]
                 note = row[6]
-                color = InterfaceColors.SUCCESS_GREEN if "BUY" in side else InterfaceColors.DANGER_RED
-                recent_lines.insert(0, f"[{timestamp}] {color}{side:<10}{InterfaceColors.RESET_STYLE} {symbol} {note}")
+                
+                # Check line parameters to format the entire row color dynamically
+                if "Stop Loss" in note:
+                    line_color = InterfaceColors.DANGER_RED
+                elif "Trailing Stop" in note:
+                    line_color = InterfaceColors.SUCCESS_GREEN
+                elif "BUY" in side:
+                    line_color = InterfaceColors.WARNING_YELLOW
+                else:
+                    line_color = InterfaceColors.RESET_STYLE
+
+                recent_lines.insert(0, f"{line_color}[{timestamp}] {side:<10} {symbol} {note}{InterfaceColors.RESET_STYLE}")
     except Exception as error_message:
         print(f"Activity Log Error {error_message}")
         record_error_to_log("Activity_LOG", str(error_message))
@@ -223,8 +233,8 @@ def run_trading_engine():
     })
 
     current_portfolio = restore_portfolio_from_log()
-    recent_activity_ram = get_recent_activity_from_csv()
     settings = load_trading_configuration()
+    recent_activity_ram = get_recent_activity_from_csv()
 
     while True:
         try:
@@ -319,8 +329,9 @@ def run_trading_engine():
                                     state["total_cost"] = execution_quantity * execution_price
                                     state["lowest_seen_price"] = float('inf')
 
+                                    # UPDATE: Entire line is now warning yellow for trailing buys
                                     timestamp = time.strftime("%H:%M:%S")
-                                    recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.SUCCESS_GREEN}LIVE_BUY {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Buy: {trailing_buy_percentage}% bounce")
+                                    recent_activity_ram.insert(0, f"{InterfaceColors.WARNING_YELLOW}[{timestamp}] LIVE_BUY    {active_symbol} Trailing Buy: {trailing_buy_percentage}% bounce{InterfaceColors.RESET_STYLE}")
                                     del recent_activity_ram[10:]
 
                                 except Exception as error_message:
@@ -367,16 +378,19 @@ def run_trading_engine():
                                 available_usd_cash + (sell_quantity * execution_price),
                                 f"Stop Loss Hit: -{stop_loss_pct}%"
                             )
-                            state["status"] = "WAITING"
-                            state["coins"] = 0.0
-                            state["total_cost"] = 0.0
-                            state["highest_seen"] = 0.0
-                            state["lowest_seen_price"] = float('inf')
-                            timestamp = time.strftime("%H:%M:%S")
-                            recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Stop Loss Hit: -{stop_loss_pct}%")
-                            del recent_activity_ram[10:]
                         except Exception as error_message:
                             record_error_to_log("STOP_LOSS", f"[{active_symbol}] {str(error_message)}")
+
+                        state["status"] = "WAITING"
+                        state["coins"] = 0.0
+                        state["total_cost"] = 0.0
+                        state["highest_seen"] = 0.0
+                        state["lowest_seen_price"] = float('inf')
+                        
+                        # UPDATE: Entire line is now danger red for hard stop losses
+                        timestamp = time.strftime("%H:%M:%S")
+                        recent_activity_ram.insert(0, f"{InterfaceColors.DANGER_RED}[{timestamp}] LIVE_SELL   {active_symbol} Stop Loss Hit: -{stop_loss_pct}%{InterfaceColors.RESET_STYLE}")
+                        del recent_activity_ram[10:]
                         continue
 
                     # 1. Track peak
@@ -404,7 +418,6 @@ def run_trading_engine():
 
                                 order = exchange_client.create_market_sell_order(active_symbol, sell_quantity)
                                 
-                                # FIX: Match matching execution price logic used in Hard Stop block
                                 if order.get('price'):
                                     execution_price = order.get('price')
                                 else:
@@ -423,17 +436,15 @@ def run_trading_engine():
                                 record_error_to_log("SELL_ORDER", f"[{active_symbol}] {str(error_message)}")
                                 execution_price = current_price
 
-                            # FIX: Update state and RAM regardless of trade receipt logging errors
                             state["status"] = "WAITING"
                             state["coins"] = 0.0
                             state["total_cost"] = 0.0
                             state["highest_seen"] = 0.0
                             state["lowest_seen_price"] = float('inf')
 
+                            # UPDATE: Entire line is now success green for trailing stops that made money
                             timestamp = time.strftime("%H:%M:%S")
-                            recent_activity_ram.insert(0, f"[{timestamp}] {InterfaceColors.DANGER_RED}LIVE_SELL {InterfaceColors.RESET_STYLE} {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop")
-                            
-                            # FIX: Used standard deletion tracker instead of slice copying
+                            recent_activity_ram.insert(0, f"{InterfaceColors.SUCCESS_GREEN}[{timestamp}] LIVE_SELL   {active_symbol} Trailing Stop Hit: {trailing_stop_percentage}% drop{InterfaceColors.RESET_STYLE}")
                             del recent_activity_ram[10:]
                             continue
 
