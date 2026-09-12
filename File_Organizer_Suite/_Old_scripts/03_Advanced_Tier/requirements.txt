@@ -1,6 +1,0 @@
-# OMEGAZYPH File Optimizer Requirements
-# These are standard libraries, but listed for environment compatibility.
-os
-shutil
-logging
-json
