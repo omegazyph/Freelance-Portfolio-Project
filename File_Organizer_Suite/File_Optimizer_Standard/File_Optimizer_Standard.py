@@ -104,14 +104,14 @@ class FileOptimizerStandard:
             try:
                 with open(CONFIG_PATH, 'r') as file_handle:
                     return json.load(file_handle)
-            except Exception as load_error:
+            except FileNotFoundError as load_error:
                 print_message("warning", f"Failed to parse config.json, using defaults: {load_error}")
                 return default_rules
         else:
             try:
                 with open(CONFIG_PATH, 'w') as file_handle:
                     json.dump(default_rules, file_handle, indent=4)
-            except Exception as save_error:
+            except FileNotFoundError as save_error:
                 print_message("warning", f"Could not save default config.json: {save_error}")
             return default_rules
 
