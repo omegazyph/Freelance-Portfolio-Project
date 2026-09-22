@@ -152,9 +152,24 @@ class FileOptimizerStandard:
                         print_message("success", f"Moved: {filename} -> {category}")
                         logging.info(f"Moved: {filename} to {category}")
                         files_moved += 1
-                    except Exception as move_error:
-                        print_message("error", f"Failed to move {filename}: {move_error}")
-                        logging.error(f"Failed to move {filename}: {move_error}")
+                    except shutil.Error as duplicate_error:
+                        error_msg = f"Destination file already exists in '{category}'."
+                        print_message("warning", f"Skipped {filename}: {error_msg}")
+                        logging.warning(f"Skipped {filename}: {error_msg}")
+                    except PermissionError:
+                        error_msg = f"Permission denied for '{filename}' (File may be in use or open in another program)."
+                        print_message("error", f"Failed to move {filename}: {error_msg}")
+                        logging.error(f"Failed to move {filename}: {error_msg}")
+                    except FileNotFoundError:
+                        error_msg = f"Source or destination path not found for '{filename}'."
+                        print_message("error", f"Failed to move {filename}: {error_msg}")
+                        logging.error(f"Failed to move {filename}: {error_msg}")
+                    except OSError as os_error:
+                        print_message("error", f"Failed to move {filename}: OS Error ({os_error})")
+                        logging.error(f"Failed to move {filename}: OS Error ({os_error})")
+                    except Exception as unexpected_error:
+                        print_message("error", f"Failed to move {filename}: Unexpected Error ({unexpected_error})")
+                        logging.error(f"Failed to move {filename}: Unexpected Error ({unexpected_error})")
 
         end_time = datetime.now()
         duration = end_time - start_time
