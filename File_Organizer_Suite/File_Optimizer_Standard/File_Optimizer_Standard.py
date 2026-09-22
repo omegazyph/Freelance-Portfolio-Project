@@ -123,7 +123,7 @@ class FileOptimizerStandard:
             print_message("error", f"The path '{target_directory}' does not exist.")
             return
 
-        start_time = datetime.now()
+        start_time = datetime.datetime.now()
         print_message("status", f"Scanning: {target_directory}")
 
         protected_files = [
