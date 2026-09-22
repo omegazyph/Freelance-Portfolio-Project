@@ -4,10 +4,10 @@
 # Updated: 2026-03-01
 # Description: Professional CLI file optimizer with Color Output and Path Selection.
 
-import os
-import shutil
 import json
 import logging
+import os
+import shutil
 from datetime import datetime
 
 # Base directory for the script's internal files

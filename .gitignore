@@ -3,7 +3,7 @@
 # File Name  : .gitignore
 # Author     : omegazyph
 # Created    : 01-05-2026
-# Updated    : 09-11-2026
+# Updated    : 09-22-2026
 # Description: Specifies intentionally untracked files and private local 
 #              directories that Git should ignore when pushing to GitHub.
 ###############################################################################
@@ -14,10 +14,8 @@
 # Private local workspace folder
 private/
 
-# Ignore config files anywhere in the repository
-**/config.json
-**/config_copy.json
-**/config/
+# Ignore all JSON configuration files anywhere in the repository
+*.json
 
 # Logs and local data files
 logs/
