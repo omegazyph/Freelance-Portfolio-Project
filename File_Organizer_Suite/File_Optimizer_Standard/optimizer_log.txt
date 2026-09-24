@@ -8,3 +8,4 @@
 2026-03-01 13:00:37,120 - ERROR - Invalid path provided: C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\~\Documents
 2026-03-01 13:01:25,435 - INFO - Started cleaning: C:\Users\omega\Documents
 2026-03-01 13:01:25,437 - INFO - Organization complete. Files moved: 0
+2026-09-24 17:04:05,323 - CRITICAL - Missing required configuration file: 'C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\File_Optimizer_Standard\config.json'. Program cannot run without config.json.
