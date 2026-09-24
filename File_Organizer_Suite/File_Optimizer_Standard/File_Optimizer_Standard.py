@@ -37,6 +37,9 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# Instantiate module-level logger instance
+logger = logging.getLogger(__name__)
+
 
 # --- UI Functions ---
 
@@ -116,15 +119,20 @@ class FileOptimizerStandard:
             return default_rules
 
     def organize(self, target_directory):
-        """Scans the target folder and organizes files based on category rules."""
+        """
+        Scans the target folder and organizes files based on category rules.
+        """
         target_directory = os.path.abspath(target_directory)
         
         if not os.path.exists(target_directory):
-            print_message("error", f"The path '{target_directory}' does not exist.")
+            error_message = f"the path '{target_directory}' does not exist."
+            print_message("error", error_message)
+            logger.error(error_message)
             return
 
         start_time = datetime.datetime.now()
-        print_message("status", f"Scanning: {target_directory}")
+        print_message("status", f"Scanning target directory: {target_directory}")
+        logger.info(f"Started optimization scan on: {target_directory}")
 
         protected_files = [
             os.path.basename(__file__),
@@ -150,28 +158,41 @@ class FileOptimizerStandard:
                     try:
                         shutil.move(file_path, os.path.join(dest_dir, filename))
                         print_message("success", f"Moved: {filename} -> {category}")
-                        logging.info(f"Moved: {filename} to {category}")
+                        logger.info(f"Moved: {filename} to {category}")
                         files_moved += 1
-                    except shutil.Error as duplicate_error:
-                        error_msg = f"Destination file already exists in '{category}'."
-                        print_message("warning", f"Skipped {filename}: {error_msg}")
-                        logging.warning(f"Skipped {filename}: {error_msg}")
-                    except PermissionError:
-                        error_msg = f"Permission denied for '{filename}' (File may be in use or open in another program)."
-                        print_message("error", f"Failed to move {filename}: {error_msg}")
-                        logging.error(f"Failed to move {filename}: {error_msg}")
-                    except FileNotFoundError:
-                        error_msg = f"Source or destination path not found for '{filename}'."
-                        print_message("error", f"Failed to move {filename}: {error_msg}")
-                        logging.error(f"Failed to move {filename}: {error_msg}")
-                    except OSError as os_error:
-                        print_message("error", f"Failed to move {filename}: OS Error ({os_error})")
-                        logging.error(f"Failed to move {filename}: OS Error ({os_error})")
-                    except Exception as unexpected_error:
-                        print_message("error", f"Failed to move {filename}: Unexpected Error ({unexpected_error})")
-                        logging.error(f"Failed to move {filename}: Unexpected Error ({unexpected_error})")
+                        break
 
-        end_time = datetime.now()
+                    except shutil.Error as duplicate_error:
+                        error_message = f"Destination file already exists in '{category}': {duplicate_error}"
+                        print_message("warning", f"Skipped {filename}: {error_message}")
+                        logger.warning(f"Skipped {filename}: {error_message}")
+                        break
+
+                    except PermissionError:
+                        error_message = f"Permission denied for '{filename}' (File may be in use or open in another program)."
+                        print_message("error", f"Failed to move {filename}: {error_message}")
+                        logger.error(f"Failed to move {filename}: {error_message}")
+                        break
+
+                    except FileNotFoundError:
+                        error_message = f"Source or destination path not found for '{filename}'."
+                        print_message("error", f"Failed to move {filename}: {error_message}")
+                        logger.error(f"Failed to move {filename}: {error_message}")
+                        break
+
+                    except OSError as os_error:
+                        error_message = f"OS level error encountered: {os_error}"
+                        print_message("error", f"Failed to move {filename}: OS Error ({os_error})")
+                        logger.error(f"Failed to move {filename}: OS Error ({os_error})")
+                        break
+
+                    except RuntimeError as unexpected_error:
+                        error_message = f"Unexpected runtime error: {unexpected_error}"
+                        print_message("error", f"Failed to move {filename}: Unexpected Error ({error_message})")
+                        logger.error(f"Failed to move {filename}: Unexpected Error ({error_message})")
+                        break
+
+        end_time = datetime.datetime.now()
         duration = end_time - start_time
         
         print(f"\n{PURPLE}--- Summary ---{RESET}")
