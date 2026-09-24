@@ -96,27 +96,26 @@ class FileOptimizerStandard:
         self.rules = self.load_config()
 
     def load_config(self):
-        """Loads sorting rules from configuration file or initializes defaults."""
-        default_rules = {
-            "Images": [".jpg", ".jpeg", ".png", ".gif"],
-            "Documents": [".pdf", ".docx", ".txt", ".xlsx"],
-            "Videos": [".mp4", ".mkv", ".mov"],
-            "Archives": [".zip", ".rar", ".7z"]
-        }
-        if os.path.exists(CONFIG_PATH):
-            try:
-                with open(CONFIG_PATH, 'r') as file_handle:
-                    return json.load(file_handle)
-            except FileNotFoundError as load_error:
-                print_message("warning", f"Failed to parse config.json, using defaults: {load_error}")
-                return default_rules
-        else:
-            try:
-                with open(CONFIG_PATH, 'w') as file_handle:
-                    json.dump(default_rules, file_handle, indent=4)
-            except FileNotFoundError as save_error:
-                print_message("warning", f"Could not save default config.json: {save_error}")
-            return default_rules
+        """
+        Loads sorting rules strictly from config.json.
+        Terinates execution if the configuration file is missing or invalid.
+        """
+        # step 1: Verify file existence first
+        if not os.path.exists(CONFIG_PATH):
+            error_message = f"Missing required configuration file: '{CONFIG_PATH}'. Program cannot run without config.json."
+            print_message("error", error_message)
+            logger.critical(error_message)
+            raise FileNotFoundError(error_message)
+
+        try:
+            with open(CONFIG_PATH, 'r') as file_handle:
+                return json.load(file_handle)
+                
+        except (OSError, json.JSONDecodeError) as parse_error:
+            error_message = f"Failed to parse config.json: {parse_error}"
+            print_message("error", error_message)
+            logger.critical(error_message)
+            raise FileNotFoundError(error_message)
 
     def organize(self, target_directory):
         """
