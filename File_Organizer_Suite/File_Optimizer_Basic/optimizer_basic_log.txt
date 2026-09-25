@@ -1,0 +1,1 @@
+2026-09-24 18:43:17,717 - CRITICAL - __main__ - Missing required configuration file: 'C:\Users\omega\Documents\Freelance-Portfolio-Project\File_Organizer_Suite\File_Optimizer_Basic\config_basic.json'. Program cannot run without config_basic.json.
